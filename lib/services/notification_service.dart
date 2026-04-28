@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
@@ -11,6 +12,8 @@ class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
+    if (kIsWeb) return;
+
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
 
@@ -26,7 +29,7 @@ class NotificationService {
   }
 
   Future<void> scheduleAlarm(EventModel event) async {
-    if (!event.hasAlarm) return;
+    if (kIsWeb || !event.hasAlarm) return;
 
     final alarmTime = event.startDateTime.subtract(
       Duration(minutes: event.alarmMinutesBefore),
@@ -56,10 +59,12 @@ class NotificationService {
   }
 
   Future<void> cancelAlarm(String eventId) async {
+    if (kIsWeb) return;
     await _plugin.cancel(eventId.hashCode.abs());
   }
 
   Future<void> cancelAll() async {
+    if (kIsWeb) return;
     await _plugin.cancelAll();
   }
 }

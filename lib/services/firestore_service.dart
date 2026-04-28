@@ -95,11 +95,14 @@ class FirestoreService {
     return _db
         .collection('events')
         .where('coupleId', isEqualTo: coupleId)
-        .orderBy('startDateTime')
         .snapshots()
-        .map((snap) => snap.docs
-            .map((doc) => EventModel.fromMap(doc.data()))
-            .toList());
+        .map((snap) {
+          final list = snap.docs
+              .map((doc) => EventModel.fromMap(doc.data()))
+              .toList();
+          list.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+          return list;
+        });
   }
 
   Future<EventModel> addEvent(EventModel event) async {

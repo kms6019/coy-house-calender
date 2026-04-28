@@ -4,151 +4,124 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CoyHouseCalender** ??遺遺(2?? 怨듭쑀 ?ㅻ쭏??罹섎┛??Flutter ??
-- Flutter ?꾨줈?앺듃 寃쎈줈: `c:/Users/PUP99/StudioProjects/test_calender`
-- ?듭떆?붿뼵 臾몄꽌 寃쎈줈: `C:/Users/PUP99/Documents/HousePC/1. Projects/CoyHouseCalender/`
-- Firebase ?꾨줈?앺듃: `coy-house-calender`
+**CoyHouseCalender** — 부부(2인) 공유 스마트 캘린더 Flutter 앱
+- Firebase project: `coy-house-calender`
+- Design doc path: `C:/Users/PUP99/Documents/HousePC/1. Projects/CoyHouseCalender/`
 
 ## Commands
 
 ```bash
-# ?몃뱶???ㅽ뻾 (Z?뚮┰5, device ID: R3CW70R1BCW)
+# Run on physical device (Samsung Z플립5, device ID: R3CW70R1BCW)
 flutter run -d R3CW70R1BCW
 
-# Windows ?ㅽ뻾
+# Run on Windows desktop
 flutter run -d windows
 
-# ???щ＼) ?ㅽ뻾 ??Firebase Auth ?щ옒???댁뒋 ?덉쓬, 湲곕뒫 ?뚯뒪??鍮꾧텒??flutter run -d chrome
+# Run on Chrome (알림 제외 전 기능 동작 — 개발 권장)
+flutter run -d chrome
 
-# 鍮뚮뱶
+# Build APK
 flutter build apk
 
-# ?대┛ 鍮뚮뱶 (鍮뚮뱶 ?ㅻ쪟 ??
+# Clean build (빌드 오류 시)
 flutter clean && flutter pub get && flutter run -d R3CW70R1BCW
 
-# ?뺤쟻 遺꾩꽍
+# Analyze
 flutter analyze
 
-# ?뚯뒪??flutter test
+# Test
+flutter test
 ```
 
-## ?섍꼍 ?ㅼ젙 ?뺣낫
+## Environment
 
 - **Flutter SDK**: `C:\flutter_windows_3.41.6-stable\flutter\bin`
 - **Pub Cache bin**: `C:\Users\PUP99\AppData\Local\Pub\Cache\bin`
 - **JDK**: `C:\Program Files\Android\Android Studio\jbr`
-- **媛쒕컻 湲곌린**: Samsung Z?뚮┰5 (SM F731N), Android 16 (API 36)
-- **媛쒕컻 ?섍꼍**: VSCode (Flutter ?뺤옣 ?ㅼ튂??
+- **Target device**: Samsung Z플립5 (SM-F731N), Android 16 (API 36)
 
-## 湲곗닠 ?ㅽ깮
+## Architecture
 
-| ??븷 | ?⑦궎吏 |
-|------|--------|
-| ?곹깭愿由?| flutter_riverpod |
-| ?쇱슦??| go_router |
-| 諛깆뿏??DB | cloud_firestore |
-| ?몄쬆 | firebase_auth |
-| ?몄떆 ?뚮┝ | firebase_messaging |
-| 濡쒖뺄 ?뚮┝ | flutter_local_notifications + timezone |
-| 罹섎┛??UI | table_calendar |
-| ?좏떥 | intl, uuid, shared_preferences |
+### State Management & Data Flow
 
-## ?꾪궎?띿쿂
+Riverpod providers form a dependency chain:
 
 ```
-lib/
-?쒋?? main.dart                  # ??吏꾩엯?? Firebase 珥덇린???쒋?? firebase_options.dart      # flutterfire configure ?앹꽦 ?뚯씪
-?쒋?? models/
-??  ?쒋?? user_model.dart
-??  ?쒋?? couple_model.dart
-??  ?붴?? event_model.dart
-?쒋?? providers/
-??  ?쒋?? auth_provider.dart     # authStateProvider, currentUserModelProvider (StreamProvider)
-??  ?붴?? calendar_provider.dart # firestoreServiceProvider, coupleStreamProvider, eventsStreamProvider
-?쒋?? router/
-??  ?붴?? app_router.dart        # go_router ?ㅼ젙, 濡쒓렇???곹깭蹂?由щ떎?대젆???쒋?? screens/
-??  ?쒋?? auth/
-??  ??  ?쒋?? login_screen.dart
-??  ??  ?쒋?? register_screen.dart
-??  ??  ?붴?? invite_screen.dart
-??  ?쒋?? calendar/
-??  ??  ?붴?? calendar_screen.dart
-??  ?쒋?? event/
-??  ??  ?쒋?? event_form_screen.dart
-??  ??  ?붴?? event_detail_screen.dart
-??  ?붴?? settings/
-??      ?붴?? settings_screen.dart
-?붴?? services/
-    ?쒋?? auth_service.dart
-    ?쒋?? firestore_service.dart
-    ?붴?? notification_service.dart
+authStateProvider (Firebase Auth stream)
+  └─► currentUserModelProvider (Firestore users/{uid} stream)
+        └─► coupleStreamProvider (Firestore couples/{coupleId} stream)
+        └─► eventsStreamProvider (Firestore events where coupleId stream)
+              └─► eventsByDateProvider (Map<DateTime, List<EventModel>>)
+              └─► selectedDayEventsProvider (filtered by selectedDateProvider)
 ```
 
-## ?쇱슦??援ъ“
+- `authServiceProvider` → `AuthService` (singleton)
+- `firestoreServiceProvider` → `FirestoreService` (singleton)
+- `selectedDateProvider` → `StateProvider<DateTime>` for calendar date selection
+- `routerProvider` → `GoRouter` with `_RouterNotifier` that listens to auth + user model changes
 
-| 寃쎈줈 | ?붾㈃ | 議곌굔 |
-|------|------|------|
-| `/login` | 濡쒓렇??| 鍮꾨줈洹몄씤 |
-| `/register` | ?뚯썝媛??| 鍮꾨줈洹몄씤 |
-| `/invite` | ?뚰듃??珥덈? | 濡쒓렇??+ coupleId ?놁쓬 |
-| `/calendar` | 罹섎┛??硫붿씤 | 濡쒓렇??+ coupleId ?덉쓬 |
-| `/event/new` | ?쇱젙 異붽? | - |
-| `/event/detail` | ?쇱젙 ?곸꽭 | - |
-| `/event/edit` | ?쇱젙 ?섏젙 | - |
-| `/settings` | ?ㅼ젙 | - |
+### Routing & Auth Guard
 
-## Firebase ?ㅼ젙
+`app_router.dart` handles all redirect logic:
+- Not logged in → `/login`
+- Logged in, no coupleId → `/invite`
+- Logged in, has coupleId → `/calendar`
+- `/invite` auto-redirects to `/calendar` when coupleId appears (real-time via Riverpod listener)
 
-- **Firestore**: asia-northeast3 (?쒖슱), ?뚯뒪??紐⑤뱶 (30??
-- **Authentication**: ?대찓??鍮꾨?踰덊샇 ?쒖꽦??
+Routes `/event/new`, `/event/detail`, `/event/edit` pass data via `state.extra` (typed cast).
+
+### Firestore Schema
+
+Collections:
+- `users/{uid}`: `uid, email, displayName, coupleId, fcmToken, createdAt`
+- `couples/{coupleId}`: `coupleId, ownerUid, partnerUid, inviteCode, isLinked, ownerColor, partnerColor, createdAt`
+- `events/{eventId}`: `id, coupleId, createdByUid, title, description, startDateTime, endDateTime, isAllDay, color, hasAlarm, alarmMinutesBefore, createdAt, updatedAt`
+
+Key patterns:
+- Always use `set(..., SetOptions(merge: true))` instead of `update()` for user/couple doc writes (avoids missing-field errors)
+- `FirestoreService.userStream()` falls back to a minimal `UserModel` if doc parsing fails
+- Invite code = first 6 chars of UUID (uppercased, dashes stripped)
+- Event color stored as ARGB int (`Color.toARGB32()`)
+
+### Firebase Config
+
+- **Firestore region**: asia-northeast3 (Seoul), test rules (30일)
+- **Authentication**: Email/password only
 - **Android SHA-1**: `D0:13:05:85:2F:8A:9C:1E:0F:6F:B1:A2:A4:19:93:CE:E2:96:37:D4`
-- `android/app/google-services.json` ??SHA-1 ?깅줉 ??理쒖떊 踰꾩쟾?쇰줈 援먯껜 ?꾨즺
+- `android/app/google-services.json` must match the registered SHA-1
 
-## ?뚮젮吏??댁뒋 諛??닿껐踰?
-| ?댁뒋 | ?닿껐踰?|
-|------|--------|
-| Windows?먯꽌 Firebase Auth ?ㅻ젅???щ옒??| Windows ?ㅽ뻾 鍮꾧텒?? ?몃뱶?곗쑝濡??뚯뒪??|
-| Firestore `update()` 臾몄꽌 ?놁쓬 ?ㅻ쪟 | `set(..., SetOptions(merge: true))` ?ъ슜 |
-| `flutterfire` 紐낅졊???몄떇 ????| PowerShell?먯꽌 `$env:PATH += ";C:\flutter_windows_3.41.6-stable\flutter\bin"` ???ㅽ뻾 |
-| Windows 鍮뚮뱶 CMake ?ㅻ쪟 | `windows/CMakeLists.txt`??`set(CMAKE_POLICY_VERSION_MINIMUM 3.5)` 異붽???|
+## Known Issues & Workarounds
 
-## 援ы쁽 ?④퀎 ?꾪솴
+| Issue | Fix |
+|-------|-----|
+| Windows에서 Firebase Auth 미동작 | Windows 실행 금지, 실기기로 테스트 |
+| `flutterfire` CLI 인식 불가 | PowerShell에서 `$env:PATH += ";C:\flutter_windows_3.41.6-stable\flutter\bin"` 후 실행 |
+| Windows 빌드 CMake 오류 | `windows/CMakeLists.txt`에 `set(CMAKE_POLICY_VERSION_MINIMUM 3.5)` 추가 |
 
-- [x] Phase 1: Firebase ?곌껐, ?대뜑 援ъ“, ?쇱슦??
-- [x] Phase 2: 濡쒓렇???뚯썝媛?? ?뚰듃??珥덈? 肄붾뱶 ?곌껐
-- [ ] Phase 3: 罹섎┛??硫붿씤 ?붾㈃ + ?ㅼ떆媛??숆린??
-- [ ] Phase 4: ?쇱젙 CRUD
-- [ ] Phase 5: ?뚮┝ ?쒖뒪??(濡쒖뺄 + FCM)
-- [ ] Phase 6: ?ㅼ젙 ?붾㈃, 留덈Т由?
-- [ ] Phase 7: 媛ㅻ윮???덉뒪?щ┛ ?꾩젽
+## Implementation Progress
 
-## Phase 7 ??媛ㅻ윮???덉뒪?щ┛ ?꾩젽 怨꾪쉷
+- [x] Phase 1: Firebase 연결, 기본 라우팅, 라우터
+- [x] Phase 2: 로그인/회원가입, 초대코드 페어링, Firebase 연결
+- [ ] Phase 3: 캘린더 메인 화면 + 날짜별 이벤트 렌더링
+- [ ] Phase 4: 이벤트 CRUD
+- [ ] Phase 5: 알림 시스템 (로컬 + FCM)
+- [ ] Phase 6: 설정 화면, 로그아웃
+- [ ] Phase 7: 안드로이드 홈스크린 위젯
 
-### 紐⑺몴
-??罹섎┛???붾㈃怨??좎궗???붽컙 洹몃━???꾩젽 (4횞4 以묓삎 湲곗?)
+## Phase 7: Android Home Widget Plan
 
-### 援ы쁽 諛⑹떇
-- Flutter ???ㅼ씠?곕툕 釉뚮┸吏: `home_widget` ?⑦궎吏
-- ?꾩젽 UI: Kotlin + XML (Flutter ?꾩젽 ?ъ궗??遺덇?, ?ㅼ씠?곕툕濡??ъ옉??
-- ?곗씠???먮쫫: Firestore ??Flutter ????SharedPreferences ???꾩젽
+- Bridge: `home_widget` Flutter package
+- Widget UI: Kotlin + XML (not Flutter widget rendering)
+- Data flow: Firestore → Flutter app → SharedPreferences → widget
 
-### ?꾩젽 ?쒖떆 ?댁슜
-- ?????ㅻ뜑
-- ?붿씪 ?ㅻ뜑 (????
-- ?붽컙 ?좎쭨 洹몃━??(?ㅻ뒛 ?섏씠?쇱씠??
-- ?쇱젙 ?덈뒗 ????留덉빱) ?쒖떆
-- ?섎떒: ?ㅻ뒛 ?쇱젙 紐⑸줉 (理쒕? 3媛?
+Files to create:
+1. `lib/services/widget_service.dart` — writes data to SharedPreferences
+2. `android/app/src/main/res/xml/calendar_widget_info.xml`
+3. `android/app/src/main/res/layout/calendar_widget.xml`
+4. `android/app/src/main/kotlin/.../CalendarWidgetProvider.kt`
+5. Register in `android/app/src/main/AndroidManifest.xml`
 
-### ?묒뾽 紐⑸줉
-1. `pubspec.yaml` ??`home_widget` ?⑦궎吏 異붽?
-2. `lib/services/widget_service.dart` ???대깽???곗씠?곕? SharedPreferences??吏곷젹?뷀븯?????
-3. `lib/providers/calendar_provider.dart` ???대깽??蹂寃????꾩젽 媛깆떊 ?몃━嫄?
-4. `android/app/src/main/res/xml/calendar_widget_info.xml` ???꾩젽 硫뷀??곗씠??(?ш린, ?낅뜲?댄듃 二쇨린)
-5. `android/app/src/main/res/layout/calendar_widget.xml` ???꾩젽 ?덉씠?꾩썐
-6. `android/app/src/main/kotlin/.../CalendarWidgetProvider.kt` ??SharedPreferences ?쎌뼱 ?щ젰 ?뚮뜑留?
-7. `android/app/src/main/AndroidManifest.xml` ???꾩젽 ?꾨줈諛붿씠???깅줉
-
-### ?쒖빟?ы빆
-- ???ㅽ뻾 ???꾩젽 媛깆떊 (諛깃렇?쇱슫?쒕뒗 30遺?媛꾧꺽 蹂댁“)
-- ??誘몄떎??以묒뿉??留덉?留?罹먯떆 ?곗씠???쒖떆
-- Flutter `table_calendar`怨??꾩쟾???숈씪??紐⑥뼇? 遺덇? (?뚮뜑留??붿쭊 李⑥씠)
+Caveats:
+- Widget updates only when app runs (foreground/background within ~30s)
+- Widget shows cached data, not live Firestore stream
+- `table_calendar` UI cannot be reused in widget (different rendering path)
