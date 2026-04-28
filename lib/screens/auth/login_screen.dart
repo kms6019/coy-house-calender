@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -15,7 +16,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
+  bool _saveCredentials = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('saved_email') ?? '';
+    final password = prefs.getString('saved_password') ?? '';
+    if (email.isNotEmpty) {
+      _emailCtrl.text = email;
+      _passwordCtrl.text = password;
+    }
+  }
+
+  Future<void> _saveCredentialsToPrefs(String email, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('saved_email', email);
+    await prefs.setString('saved_password', password);
+  }
+
+  Future<void> _clearSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('saved_email');
+    await prefs.remove('saved_password');
+  }
 
   @override
   void dispose() {
@@ -28,10 +58,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; });
     try {
-      await ref.read(authServiceProvider).signIn(
-        _emailCtrl.text.trim(),
-        _passwordCtrl.text,
-      );
+      final email = _emailCtrl.text.trim();
+      final password = _passwordCtrl.text;
+      await ref.read(authServiceProvider).signIn(email, password);
+      if (_saveCredentials) {
+        await _saveCredentialsToPrefs(email, password);
+      } else {
+        await _clearSavedCredentials();
+      }
     } catch (e) {
       setState(() => _error = '이메일 또는 비밀번호가 올바르지 않습니다.');
     } finally {
@@ -92,11 +126,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     validator: (v) =>
                         (v == null || v.length < 6) ? '비밀번호는 6자 이상이어야 합니다' : null,
                   ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _saveCredentials,
+                        onChanged: (v) => setState(() => _saveCredentials = v!),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      const Text('로그인 정보 저장'),
+                    ],
+                  ),
                   if (_error != null) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Text(_error!, style: const TextStyle(color: Colors.red)),
                   ],
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   FilledButton(
                     onPressed: _loading ? null : _submit,
                     child: _loading
