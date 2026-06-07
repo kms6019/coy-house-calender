@@ -70,20 +70,34 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   DateTime? get _endDateTime {
     if (_endDate == null) return null;
     if (_isAllDay) return _endDate;
-    if (_endTime == null) return null;
+    final et = _endTime;
+    if (et == null) return null;
     return DateTime(_endDate!.year, _endDate!.month, _endDate!.day,
-        _endTime!.hour, _endTime!.minute);
+        et.hour, et.minute);
+  }
+
+  bool get _endBeforeStart {
+    final end = _endDateTime;
+    if (end == null) return false;
+    return !_isAllDay && end.isBefore(_startDateTime);
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_endBeforeStart) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('종료 시간이 시작 시간보다 앞설 수 없습니다.')),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
 
     final userModel = ref.read(currentUserModelProvider).valueOrNull;
     if (userModel == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('?ъ슜???뺣낫瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??')),
+          const SnackBar(content: Text('사용자 정보를 불러오지 못했습니다.')),
         );
         setState(() => _loading = false);
       }
@@ -140,7 +154,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         await ns.cancelAlarm(saved.id);
         if (_hasAlarm) await ns.scheduleAlarm(saved);
       } catch (_) {
-        warningMessage = '?쇱젙????λ릺?덉?留??뚮┝ ?ㅼ젙? ?꾨즺?섏? 紐삵뻽?듬땲??';
+        warningMessage = '일정은 저장됐지만 알림 설정은 완료되지 않았습니다.';
       }
 
       if (!mounted) return;
@@ -170,8 +184,24 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     );
     if (picked == null) return;
     setState(() {
-      if (isStart) { _startDate = picked; }
-      else { _endDate = picked; }
+      if (isStart) {
+        _startDate = picked;
+        // 종료일이 시작일보다 앞이면 초기화
+        if (_endDate != null && _endDate!.isBefore(picked)) {
+          _endDate = null;
+          _endTime = null;
+        }
+      } else {
+        _endDate = picked;
+        // 처음 종료일을 고를 때 시간이 없으면 시작 시간 +1h 로 자동 설정
+        if (_endTime == null && !_isAllDay) {
+          final startMinutes = _startTime.hour * 60 + _startTime.minute + 60;
+          _endTime = TimeOfDay(
+            hour: (startMinutes ~/ 60) % 24,
+            minute: startMinutes % 60,
+          );
+        }
+      }
     });
   }
 
@@ -182,14 +212,20 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     );
     if (picked == null) return;
     setState(() {
-      if (isStart) { _startTime = picked; }
-      else { _endTime = picked; }
+      if (isStart) {
+        _startTime = picked;
+      } else {
+        _endTime = picked;
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.event != null;
+    final dateFmt = DateFormat('yyyy년 M월 d일 (E)', 'ko_KR');
+    final dateFmtShort = DateFormat('M월 d일 (E)', 'ko_KR');
+
     return Scaffold(
       appBar: AppBar(
         title: Text(isEdit ? '일정 수정' : '일정 추가'),
@@ -208,6 +244,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // 제목
             TextFormField(
               controller: _titleCtrl,
               decoration: const InputDecoration(
@@ -216,22 +253,30 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
               ),
               style: Theme.of(context).textTheme.titleLarge,
               validator: (v) => (v == null || v.trim().isEmpty) ? '제목을 입력하세요' : null,
+              textInputAction: TextInputAction.next,
             ),
             const Divider(),
+
+            // 종일 스위치
             SwitchListTile(
               title: const Text('종일'),
               value: _isAllDay,
-              onChanged: (v) => setState(() => _isAllDay = v),
+              onChanged: (v) => setState(() {
+                _isAllDay = v;
+                if (v) { _endTime = null; }
+              }),
               contentPadding: EdgeInsets.zero,
             ),
             const Divider(),
-            // 시작 날짜/시간
+
+            // 시작 날짜
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today_outlined),
-              title: Text(DateFormat('yyyy년 M월 d일 (E)', 'ko_KR').format(_startDate)),
+              title: Text(dateFmt.format(_startDate)),
               onTap: () => _pickDate(isStart: true),
             ),
+            // 시작 시간
             if (!_isAllDay)
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -240,19 +285,32 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                 onTap: () => _pickTime(isStart: true),
               ),
             const Divider(),
+
             // 종료 날짜/시간
-            if (_endDate != null || _endTime != null) ...[
+            if (_endDate != null) ...[
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.event_outlined),
-                title: Text('종료: ${DateFormat('M월 d일').format(_endDate ?? _startDate)}'
-                    '${!_isAllDay && _endTime != null ? ' ${_endTime!.format(context)}' : ''}'),
+                title: Text('종료: ${dateFmtShort.format(_endDate!)}'),
                 trailing: IconButton(
                   icon: const Icon(Icons.close, size: 18),
                   onPressed: () => setState(() { _endDate = null; _endTime = null; }),
                 ),
                 onTap: () => _pickDate(isStart: false),
               ),
+              if (!_isAllDay)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.access_time_outlined),
+                  title: Text(_endTime != null
+                      ? _endTime!.format(context)
+                      : '종료 시간 선택'),
+                  subtitle: _endBeforeStart
+                      ? const Text('종료 시간이 시작보다 앞섭니다',
+                          style: TextStyle(color: Colors.red, fontSize: 12))
+                      : null,
+                  onTap: () => _pickTime(isStart: false),
+                ),
               const Divider(),
             ] else ...[
               TextButton.icon(
@@ -262,6 +320,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
               ),
               const Divider(),
             ],
+
             // 알림
             SwitchListTile(
               title: const Text('알림'),
@@ -283,6 +342,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                 ),
               ),
             const Divider(),
+
             // 메모
             TextFormField(
               controller: _descCtrl,

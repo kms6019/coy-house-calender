@@ -17,13 +17,15 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   bool _loading = false;
   String? _error;
   String? _myCode;
+  ProviderSubscription<AsyncValue<dynamic>>? _userSub;
 
   @override
   void initState() {
     super.initState();
-    // 이미 coupleId가 있거나 연결되는 순간 캘린더로 이동
+    // ref.listenManual: build() 밖에서 안전하게 사용 가능
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.listen(currentUserModelProvider, (_, next) {
+      if (!mounted) return;
+      _userSub = ref.listenManual(currentUserModelProvider, (prev, next) {
         final coupleId = next.valueOrNull?.coupleId ?? '';
         if (coupleId.isNotEmpty && mounted) {
           context.go('/calendar');
@@ -34,6 +36,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
 
   @override
   void dispose() {
+    _userSub?.close();
     _codeCtrl.dispose();
     super.dispose();
   }
@@ -41,11 +44,22 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   Future<void> _createCouple() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final uid = ref.read(authStateProvider).valueOrNull!.uid;
-      final couple = await ref.read(firestoreServiceProvider).createCouple(uid);
+      final firebaseUser = ref.read(authStateProvider).valueOrNull;
+      if (firebaseUser == null) {
+        setState(() => _error = '로그인 상태가 아닙니다.');
+        return;
+      }
+
+      // auth 토큰 유효성 확인
+      final token = await firebaseUser.getIdToken(true);
+      debugPrint('[InviteScreen] UID: ${firebaseUser.uid}');
+      debugPrint('[InviteScreen] Token OK: ${token != null && token.isNotEmpty}');
+
+      final couple = await ref.read(firestoreServiceProvider).createCouple(firebaseUser.uid);
       setState(() => _myCode = couple.inviteCode);
-    } catch (e) {
-      setState(() => _error = '코드 생성에 실패했습니다.');
+    } catch (e, st) {
+      debugPrint('[InviteScreen] createCouple error: $e\n$st');
+      setState(() => _error = '코드 생성에 실패했습니다.\n$e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

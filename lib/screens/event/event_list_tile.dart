@@ -9,14 +9,21 @@ class EventListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeText = event.isAllDay
-        ? '종일'
-        : DateFormat('HH:mm').format(event.startDateTime);
+    final timeFmt = DateFormat('HH:mm');
+    final String timeText;
+    if (event.isAllDay) {
+      timeText = '종일';
+    } else if (event.endDateTime != null) {
+      timeText = '${timeFmt.format(event.startDateTime)} ~ ${timeFmt.format(event.endDateTime!)}';
+    } else {
+      timeText = timeFmt.format(event.startDateTime);
+    }
 
     return ListTile(
       leading: Container(
         width: 12,
         height: 12,
+        margin: const EdgeInsets.only(top: 4),
         decoration: BoxDecoration(
           color: event.colorValue,
           shape: BoxShape.circle,

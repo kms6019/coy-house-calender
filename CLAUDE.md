@@ -102,11 +102,11 @@ Key patterns:
 
 - [x] Phase 1: Firebase 연결, 기본 라우팅, 라우터
 - [x] Phase 2: 로그인/회원가입, 초대코드 페어링, Firebase 연결
-- [ ] Phase 3: 캘린더 메인 화면 + 날짜별 이벤트 렌더링
-- [ ] Phase 4: 이벤트 CRUD
-- [ ] Phase 5: 알림 시스템 (로컬 + FCM)
-- [ ] Phase 6: 설정 화면, 로그아웃
-- [ ] Phase 7: 안드로이드 홈스크린 위젯
+- [x] Phase 3: 캘린더 메인 화면 + 날짜별 이벤트 렌더링
+- [x] Phase 4: 이벤트 CRUD
+- [x] Phase 5: 알림 시스템 (로컬 + FCM)
+- [x] Phase 6: 설정 화면, 로그아웃
+- [x] Phase 7: 안드로이드 홈스크린 위젯
 
 ## Phase 7: Android Home Widget Plan
 

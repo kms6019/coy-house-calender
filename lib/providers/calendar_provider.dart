@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/event_model.dart';
 import '../models/couple_model.dart';
 import '../services/firestore_service.dart';
+import '../services/widget_service.dart';
 import 'auth_provider.dart';
 
 final firestoreServiceProvider =
@@ -31,6 +32,14 @@ final eventsByDateProvider = Provider<Map<DateTime, List<EventModel>>>((ref) {
     map.putIfAbsent(day, () => []).add(event);
   }
   return map;
+});
+
+// 이벤트 변경 시 홈 위젯 자동 갱신
+final widgetSyncProvider = Provider<void>((ref) {
+  final events = ref.watch(eventsStreamProvider).valueOrNull;
+  if (events != null) {
+    WidgetService.update(events);
+  }
 });
 
 // 선택된 날짜

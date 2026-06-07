@@ -13,8 +13,8 @@ import '../models/event_model.dart';
 
 class _RouterNotifier extends ChangeNotifier {
   _RouterNotifier(this._ref) {
-    _ref.listen(authStateProvider, (_, __) => notifyListeners());
-    _ref.listen(currentUserModelProvider, (_, __) => notifyListeners());
+    _ref.listen(authStateProvider, (prev, next) => notifyListeners());
+    _ref.listen(currentUserModelProvider, (prev, next) => notifyListeners());
   }
   final Ref _ref;
 }
