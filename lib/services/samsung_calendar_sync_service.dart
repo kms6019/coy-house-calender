@@ -21,6 +21,9 @@ class SamsungCalendarSyncService {
 
   bool get _supported => !kIsWeb && Platform.isAndroid;
 
+  String _formatErrors(List<ResultError> errors) =>
+      errors.map((e) => '${e.errorCode}: ${e.errorMessage}').join(', ');
+
   Future<String?> _ensureCalendarExists() {
     return _ensureCalendarFuture ??= _doEnsureCalendarExists().whenComplete(() {
       _ensureCalendarFuture = null;
@@ -33,12 +36,12 @@ class SamsungCalendarSyncService {
 
     final hasPermissions = await _plugin.hasPermissions();
     if (hasPermissions.hasErrors) {
-      debugPrint('[SamsungCalendarSync] hasPermissions error: ${hasPermissions.errors}');
+      debugPrint('[SamsungCalendarSync] hasPermissions error: ${_formatErrors(hasPermissions.errors)}');
     }
     if (hasPermissions.data != true) {
       final requested = await _plugin.requestPermissions();
       if (requested.hasErrors) {
-        debugPrint('[SamsungCalendarSync] requestPermissions error: ${requested.errors}');
+        debugPrint('[SamsungCalendarSync] requestPermissions error: ${_formatErrors(requested.errors)}');
       }
       if (requested.data != true) {
         debugPrint('[SamsungCalendarSync] calendar permission denied');
@@ -48,7 +51,7 @@ class SamsungCalendarSyncService {
 
     final calendarsResult = await _plugin.retrieveCalendars();
     if (calendarsResult.hasErrors || calendarsResult.data == null) {
-      debugPrint('[SamsungCalendarSync] retrieveCalendars error: ${calendarsResult.errors}');
+      debugPrint('[SamsungCalendarSync] retrieveCalendars error: ${_formatErrors(calendarsResult.errors)}');
       return null;
     }
     final calendars = calendarsResult.data;
@@ -61,7 +64,7 @@ class SamsungCalendarSyncService {
 
     final createResult = await _plugin.createCalendar(_calendarName);
     if (createResult.hasErrors) {
-      debugPrint('[SamsungCalendarSync] createCalendar error: ${createResult.errors}');
+      debugPrint('[SamsungCalendarSync] createCalendar error: ${_formatErrors(createResult.errors)}');
     }
     final newId = createResult.data;
     if (newId != null) await _mapping.setCalendarId(newId);
@@ -76,7 +79,7 @@ class SamsungCalendarSyncService {
       final deviceEvent = buildDeviceCalendarEvent(event, calendarId: calendarId);
       final result = await _plugin.createOrUpdateEvent(deviceEvent);
       if (result != null && result.hasErrors) {
-        debugPrint('[SamsungCalendarSync] createOrUpdateEvent error: ${result.errors}');
+        debugPrint('[SamsungCalendarSync] createOrUpdateEvent error: ${_formatErrors(result.errors)}');
       }
       final deviceEventId = result?.data;
       if (deviceEventId != null) {
@@ -100,7 +103,7 @@ class SamsungCalendarSyncService {
       );
       final result = await _plugin.createOrUpdateEvent(deviceEvent);
       if (result != null && result.hasErrors) {
-        debugPrint('[SamsungCalendarSync] createOrUpdateEvent error: ${result.errors}');
+        debugPrint('[SamsungCalendarSync] createOrUpdateEvent error: ${_formatErrors(result.errors)}');
       }
       final deviceEventId = result?.data;
       if (deviceEventId != null) {
@@ -119,7 +122,7 @@ class SamsungCalendarSyncService {
       if (calendarId == null || deviceEventId == null) return;
       final result = await _plugin.deleteEvent(calendarId, deviceEventId);
       if (result.hasErrors) {
-        debugPrint('[SamsungCalendarSync] deleteEvent error: ${result.errors}');
+        debugPrint('[SamsungCalendarSync] deleteEvent error: ${_formatErrors(result.errors)}');
       }
       await _mapping.removeDeviceEventId(eventId);
     } catch (e) {
