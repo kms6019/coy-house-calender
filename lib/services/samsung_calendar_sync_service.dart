@@ -11,8 +11,6 @@ class SamsungCalendarSyncService {
   final DeviceCalendarPlugin _plugin;
   final CalendarEventMapping _mapping;
 
-  Future<String?>? _ensureCalendarFuture;
-
   SamsungCalendarSyncService({
     DeviceCalendarPlugin? plugin,
     CalendarEventMapping? mapping,
@@ -24,13 +22,7 @@ class SamsungCalendarSyncService {
   String _formatErrors(List<ResultError> errors) =>
       errors.map((e) => '${e.errorCode}: ${e.errorMessage}').join(', ');
 
-  Future<String?> _ensureCalendarExists() {
-    return _ensureCalendarFuture ??= _doEnsureCalendarExists().whenComplete(() {
-      _ensureCalendarFuture = null;
-    });
-  }
-
-  Future<String?> _doEnsureCalendarExists() async {
+  Future<String?> _ensureCalendarExists() async {
     final cached = await _mapping.getCalendarId();
     if (cached != null) return cached;
 
