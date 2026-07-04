@@ -6,6 +6,7 @@ import '../../models/event_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../services/notification_service.dart';
+import '../../services/samsung_calendar_sync_service.dart';
 
 class EventFormScreen extends ConsumerStatefulWidget {
   final EventModel? event;
@@ -146,6 +147,13 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           updatedAt: DateTime.now(),
         );
         await fs.updateEvent(saved);
+      }
+
+      final calendarSync = SamsungCalendarSyncService();
+      if (widget.event == null) {
+        await calendarSync.syncEventCreate(saved);
+      } else {
+        await calendarSync.syncEventUpdate(saved);
       }
 
       String? warningMessage;

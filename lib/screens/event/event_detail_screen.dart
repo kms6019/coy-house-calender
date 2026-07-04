@@ -6,6 +6,7 @@ import '../../models/event_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../services/notification_service.dart';
+import '../../services/samsung_calendar_sync_service.dart';
 
 class EventDetailScreen extends ConsumerWidget {
   final EventModel event;
@@ -113,6 +114,7 @@ class EventDetailScreen extends ConsumerWidget {
     if (confirmed == true) {
       await ref.read(firestoreServiceProvider).deleteEvent(event.id);
       await NotificationService().cancelAlarm(event.id);
+      await SamsungCalendarSyncService().syncEventDelete(event.id);
       if (context.mounted) context.pop();
     }
   }

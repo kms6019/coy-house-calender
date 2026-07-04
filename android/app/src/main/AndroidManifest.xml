@@ -4,6 +4,9 @@
     <!-- 정확한 알람 (예약 알림) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- 삼성캘린더(기기 네이티브 캘린더) 동기화 -->
+    <uses-permission android:name="android.permission.READ_CALENDAR"/>
+    <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
 
     <application
         android:label="CoyHouse Calendar"
