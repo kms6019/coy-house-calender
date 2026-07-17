@@ -25,16 +25,17 @@ class CalendarWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             widgetId: Int
         ) {
+            // home_widget 플러그인은 HomeWidgetPreferences에 prefix 없이 저장한다
             val prefs = context.getSharedPreferences(
-                "FlutterSharedPreferences", Context.MODE_PRIVATE
+                "HomeWidgetPreferences", Context.MODE_PRIVATE
             )
-            val todayLabel = prefs.getString("flutter.calendar_widget_today", "") ?: ""
-            val eventsJson = prefs.getString("flutter.calendar_widget_events", "[]") ?: "[]"
+            val todayLabel = prefs.getString("calendar_widget_today", "") ?: ""
+            val eventsJson = prefs.getString("calendar_widget_events", "[]") ?: "[]"
 
             val views = RemoteViews(context.packageName, R.layout.calendar_widget)
             views.setTextViewText(R.id.widget_today_label, todayLabel)
 
-            val ddayLine = prefs.getString("flutter.calendar_widget_dday", "") ?: ""
+            val ddayLine = prefs.getString("calendar_widget_dday", "") ?: ""
             if (ddayLine.isNotEmpty()) {
                 views.setTextViewText(R.id.widget_dday, ddayLine)
                 views.setViewVisibility(R.id.widget_dday, View.VISIBLE)

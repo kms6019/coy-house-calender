@@ -46,13 +46,14 @@
         android:ellipsize="end"
         android:visibility="gone" />
 
-    <!-- 구분선 -->
-    <View
+    <!-- 구분선 (RemoteViews는 plain View 인플레이트 금지 → ImageView 사용) -->
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="6dp"
         android:layout_marginBottom="6dp"
-        android:background="#33C2185B" />
+        android:background="#33C2185B"
+        android:importantForAccessibility="no" />
 
     <!-- 이벤트 1 -->
     <TextView

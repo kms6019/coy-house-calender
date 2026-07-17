@@ -14,6 +14,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Run on physical device (Samsung Z플립5, device ID: R3CW70R1BCW)
 flutter run -d R3CW70R1BCW
 
+# WiFi 디버깅 (USB 불필요, 폰과 같은 WiFi + 무선 디버깅 ON 필요)
+# adb 위치: D:\platform-tools-latest-windows\platform-tools\adb.exe
+# 최초 1회 페어링: adb pair <IP:페어링포트> <코드> (폰 무선 디버깅 화면 참조)
+# 이후: adb mdns services 로 자동 발견되면 flutter devices 에 wireless로 잡힘
+flutter run -d adb-R3CW70R1BCW-AKYuPq._adb-tls-connect._tcp
+
 # Run on Windows desktop
 flutter run -d windows
 
@@ -97,6 +103,8 @@ Key patterns:
 | Windows에서 Firebase Auth 미동작 | Windows 실행 금지, 실기기로 테스트 |
 | `flutterfire` CLI 인식 불가 | PowerShell에서 `$env:PATH += ";C:\flutter_windows_3.41.6-stable\flutter\bin"` 후 실행 |
 | Windows 빌드 CMake 오류 | `windows/CMakeLists.txt`에 `set(CMAKE_POLICY_VERSION_MINIMUM 3.5)` 추가 |
+| 홈위젯 레이아웃에 plain `<View>` 사용 금지 | RemoteViews 화이트리스트 위반 → 위젯 전체 회색("추가할 수 없습니다"). 구분선은 `<ImageView>` 사용 |
+| 홈위젯 Kotlin에서 SharedPreferences 읽기 | `home_widget` 플러그인은 `HomeWidgetPreferences` 파일에 **prefix 없이** 저장. `FlutterSharedPreferences`/`flutter.` prefix 아님 |
 
 ## Implementation Progress
 
