@@ -149,28 +149,31 @@ class WishlistScreen extends ConsumerWidget {
       ),
     );
 
-    if (saved == true) {
-      final title = titleCtrl.text.trim();
-      final memo = memoCtrl.text.trim();
-      final fs = ref.read(firestoreServiceProvider);
-      if (existing != null) {
-        // memo는 빈 문자열로도 저장 가능 (subtitle 가드가 미표시 처리 → 실질적 해제)
-        await fs.updateWish(existing.copyWith(title: title, memo: memo));
-      } else {
-        final uid = ref.read(authStateProvider).valueOrNull?.uid;
-        final couple = ref.read(coupleStreamProvider).valueOrNull;
-        if (uid == null || couple == null) return;
-        await fs.addWish(WishModel(
-          id: '',
-          coupleId: couple.coupleId,
-          createdByUid: uid,
-          title: title,
-          memo: memo.isEmpty ? null : memo,
-          createdAt: DateTime.now(),
-        ));
+    try {
+      if (saved == true) {
+        final title = titleCtrl.text.trim();
+        final memo = memoCtrl.text.trim();
+        final fs = ref.read(firestoreServiceProvider);
+        if (existing != null) {
+          // copyWith는 null 병합이라 빈 문자열로 저장 (subtitle 가드가 미표시 처리)
+          await fs.updateWish(existing.copyWith(title: title, memo: memo));
+        } else {
+          final uid = ref.read(authStateProvider).valueOrNull?.uid;
+          final couple = ref.read(coupleStreamProvider).valueOrNull;
+          if (uid == null || couple == null) return;
+          await fs.addWish(WishModel(
+            id: '',
+            coupleId: couple.coupleId,
+            createdByUid: uid,
+            title: title,
+            memo: memo.isEmpty ? null : memo,
+            createdAt: DateTime.now(),
+          ));
+        }
       }
+    } finally {
+      titleCtrl.dispose();
+      memoCtrl.dispose();
     }
-    titleCtrl.dispose();
-    memoCtrl.dispose();
   }
 }
