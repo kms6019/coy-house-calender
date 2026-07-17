@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import '../models/event_model.dart';
+import '../utils/event_utils.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
@@ -40,7 +41,22 @@ class NotificationService {
   Future<void> scheduleAlarm(EventModel event) async {
     if (!_supported || !event.hasAlarm) return;
 
-    final alarmTime = event.startDateTime.subtract(
+    DateTime? occurrenceStart;
+    if (event.repeat == RepeatRule.none) {
+      occurrenceStart = event.startDateTime;
+    } else {
+      // 반복: 다음 회차 1건만 스케줄
+      occurrenceStart = nextOccurrence(event, DateTime.now());
+      if (occurrenceStart != null &&
+          occurrenceStart
+              .subtract(Duration(minutes: event.alarmMinutesBefore))
+              .isBefore(DateTime.now())) {
+        occurrenceStart = nextOccurrence(event, occurrenceStart);
+      }
+    }
+    if (occurrenceStart == null) return;
+
+    final alarmTime = occurrenceStart.subtract(
       Duration(minutes: event.alarmMinutesBefore),
     );
     if (alarmTime.isBefore(DateTime.now())) return;

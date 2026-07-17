@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/event_model.dart';
 import '../models/couple_model.dart';
 import '../services/firestore_service.dart';
+import '../services/notification_service.dart';
 import '../services/widget_service.dart';
 import 'auth_provider.dart';
 
@@ -30,6 +31,18 @@ final widgetSyncProvider = Provider<void>((ref) {
   if (events != null) {
     WidgetService.update(events,
         anniversaries: couple?.anniversaries ?? const []);
+  }
+});
+
+// 이벤트 변화 시(앱 실행 포함) 알림 재스케줄 — 반복 이벤트의 다음 회차 갱신용
+final alarmSyncProvider = Provider<void>((ref) {
+  final events = ref.watch(eventsStreamProvider).valueOrNull;
+  if (events == null) return;
+  final ns = NotificationService();
+  for (final event in events) {
+    ns.cancelAlarm(event.id).then((_) {
+      if (event.hasAlarm) ns.scheduleAlarm(event);
+    });
   }
 });
 
