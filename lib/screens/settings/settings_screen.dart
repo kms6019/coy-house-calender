@@ -63,24 +63,39 @@ class SettingsScreen extends ConsumerWidget {
               }
               if (!couple.isLinked) {
                 // 커플 생성됨·파트너 대기 중: /invite는 coupleId 있으면 튕기므로
-                // 초대 코드를 여기서 바로 보여준다
-                return ListTile(
-                  leading:
-                      const Icon(Icons.favorite_border, color: Colors.grey),
-                  title: const Text('파트너 연결 대기 중'),
-                  subtitle: Text(
-                      '초대 코드: ${couple.inviteCode}\n파트너가 이 코드를 입력하면 연결됩니다'),
-                  isThreeLine: true,
-                  trailing: IconButton(
-                    icon: const Icon(Icons.copy, size: 20),
-                    onPressed: () {
-                      Clipboard.setData(
-                          ClipboardData(text: couple.inviteCode));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('코드가 복사되었습니다')),
-                      );
-                    },
-                  ),
+                // 초대 코드 표시 + 상대 코드 입력을 여기서 처리한다
+                return Column(
+                  children: [
+                    ListTile(
+                      leading:
+                          const Icon(Icons.favorite_border, color: Colors.grey),
+                      title: const Text('파트너 연결 대기 중'),
+                      subtitle: Text(
+                          '초대 코드: ${couple.inviteCode}\n파트너가 이 코드를 입력하면 연결됩니다'),
+                      isThreeLine: true,
+                      trailing: IconButton(
+                        icon: const Icon(Icons.copy, size: 20),
+                        onPressed: () {
+                          Clipboard.setData(
+                              ClipboardData(text: couple.inviteCode));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('코드가 복사되었습니다')),
+                          );
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 72, bottom: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => _enterPartnerCode(context, ref),
+                          icon: const Icon(Icons.keyboard, size: 18),
+                          label: const Text('파트너 코드 입력하기'),
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               }
               // 연결됨 상태
@@ -174,6 +189,63 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _enterPartnerCode(BuildContext context, WidgetRef ref) async {
+    final codeCtrl = TextEditingController();
+    final code = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('파트너 코드 입력'),
+        content: TextField(
+          controller: codeCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: '예) AB12CD',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.characters,
+          maxLength: 6,
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, codeCtrl.text.trim()),
+            child: const Text('연결'),
+          ),
+        ],
+      ),
+    );
+    codeCtrl.dispose();
+    if (code == null || code.length != 6) {
+      if (code != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('6자리 코드를 입력하세요')),
+        );
+      }
+      return;
+    }
+
+    final uid = ref.read(authStateProvider).valueOrNull?.uid;
+    if (uid == null) return;
+    try {
+      final joined =
+          await ref.read(firestoreServiceProvider).joinByInviteCode(code, uid);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(joined != null
+                ? '파트너와 연결되었습니다!'
+                : '유효하지 않은 코드입니다')),
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('연결에 실패했습니다')),
+        );
+      }
+    }
   }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
