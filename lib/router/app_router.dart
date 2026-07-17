@@ -9,6 +9,7 @@ import '../screens/calendar/calendar_screen.dart';
 import '../screens/event/event_form_screen.dart';
 import '../screens/event/event_detail_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/settings/anniversary_screen.dart';
 import '../models/event_model.dart';
 
 class _RouterNotifier extends ChangeNotifier {
@@ -80,6 +81,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/settings', builder: (context, _) => const SettingsScreen()),
+      GoRoute(
+        path: '/settings/anniversaries',
+        builder: (context, _) => const AnniversaryScreen(),
+      ),
     ],
   );
 });

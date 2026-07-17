@@ -116,6 +116,15 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
 
+          // 기념일 관리
+          ListTile(
+            leading: const Icon(Icons.cake_outlined),
+            title: const Text('기념일 관리'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/anniversaries'),
+          ),
+          const Divider(),
+
           // 앱 정보
           const ListTile(
             leading: Icon(Icons.info_outline),

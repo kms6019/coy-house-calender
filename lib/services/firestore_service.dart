@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
+import '../models/anniversary_model.dart';
 import '../models/couple_model.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
@@ -87,6 +88,13 @@ class FirestoreService {
             );
           }
         });
+  }
+
+  Future<void> updateAnniversaries(
+      String coupleId, List<AnniversaryModel> anniversaries) {
+    return _db.collection('couples').doc(coupleId).set({
+      'anniversaries': anniversaries.map((a) => a.toMap()).toList(),
+    }, SetOptions(merge: true));
   }
 
   // ── Events ──────────────────────────────────────────────
