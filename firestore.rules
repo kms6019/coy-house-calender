@@ -1,9 +1,43 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 임시: auth 없이 전체 허용 (Windows SDK 인증 토큰 연동 테스트용)
-    match /{document=**} {
-      allow read, write: if true;
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myCoupleId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coupleId;
+    }
+
+    function isCoupleMember(data) {
+      return data.ownerUid == request.auth.uid || data.partnerUid == request.auth.uid;
+    }
+
+    // 본인 문서만 읽기/쓰기
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /couples/{coupleId} {
+      // 초대코드 조인 쿼리를 위해 로그인 사용자 읽기 허용 (초대코드 자체가 비밀값)
+      allow read: if signedIn();
+      // 생성: 본인이 owner인 문서만
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      // 수정: 멤버이거나, 미연결 커플에 본인이 partner로 합류하는 경우
+      allow update: if signedIn() && (
+        isCoupleMember(resource.data) ||
+        (resource.data.isLinked == false &&
+         request.resource.data.partnerUid == request.auth.uid &&
+         request.resource.data.ownerUid == resource.data.ownerUid)
+      );
+    }
+
+    match /events/{eventId} {
+      // 내 커플의 이벤트만
+      allow read, update, delete: if signedIn() && resource.data.coupleId == myCoupleId();
+      allow create: if signedIn() &&
+        request.resource.data.coupleId == myCoupleId() &&
+        request.resource.data.createdByUid == request.auth.uid;
     }
   }
 }
