@@ -21,6 +21,9 @@ class CalendarScreen extends ConsumerWidget {
     final selectedDay = ref.watch(selectedDateProvider);
     final focusedDay = ref.watch(focusedDateProvider);
     final events = ref.watch(eventsStreamProvider).valueOrNull ?? [];
+    final monthStart = DateTime(focusedDay.year, focusedDay.month, 1);
+    final monthEnd = DateTime(focusedDay.year, focusedDay.month + 1, 0);
+    final expandedEvents = expandRecurringForRange(events, monthStart, monthEnd);
     final eventsAsync = ref.watch(eventsStreamProvider);
     final coupleAsync = ref.watch(coupleStreamProvider);
     ref.watch(widgetSyncProvider);
@@ -168,7 +171,7 @@ class CalendarScreen extends ConsumerWidget {
                     )
                   : MonthGrid(
                       month: focusedDay,
-                      events: events,
+                      events: expandedEvents,
                       selectedDay: selectedDay,
                       onDayTap: openDay,
                     ),
