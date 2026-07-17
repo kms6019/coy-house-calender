@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/event_model.dart';
+import '../../utils/event_utils.dart';
+import 'event_detail_screen.dart' show EventDetailArgs;
 
 class EventListTile extends StatelessWidget {
   final EventModel event;
@@ -31,10 +33,26 @@ class EventListTile extends StatelessWidget {
       ),
       title: Text(event.title),
       subtitle: Text(timeText, style: const TextStyle(fontSize: 12)),
-      trailing: event.hasAlarm
-          ? Icon(Icons.notifications_outlined, size: 16, color: Colors.grey[500])
-          : null,
-      onTap: () => context.push('/event/detail', extra: event),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (event.repeat != RepeatRule.none)
+            Icon(Icons.repeat, size: 16, color: Colors.grey[500]),
+          if (event.hasAlarm)
+            Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: Icon(Icons.notifications_outlined,
+                  size: 16, color: Colors.grey[500]),
+            ),
+        ],
+      ),
+      onTap: () => context.push(
+        '/event/detail',
+        extra: EventDetailArgs(
+          event: event,
+          occurrenceDate: calendarDateKey(event.startDateTime),
+        ),
+      ),
     );
   }
 }
