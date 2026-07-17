@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/couple_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
+import '../../services/briefing_prefs.dart';
 import '../../services/notification_service.dart';
 import '../../theme/couple_palette.dart';
 
@@ -172,6 +173,10 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
 
+          // 아침 브리핑
+          const _BriefingSection(),
+          const Divider(),
+
           // 앱 정보
           const ListTile(
             leading: Icon(Icons.info_outline),
@@ -329,5 +334,76 @@ class SettingsScreen extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+class _BriefingSection extends ConsumerStatefulWidget {
+  const _BriefingSection();
+
+  @override
+  ConsumerState<_BriefingSection> createState() => _BriefingSectionState();
+}
+
+class _BriefingSectionState extends ConsumerState<_BriefingSection> {
+  BriefingPrefs? _prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    BriefingPrefs.load().then((p) {
+      if (mounted) setState(() => _prefs = p);
+    });
+  }
+
+  Future<void> _apply({required bool enabled, int? hour, int? minute}) async {
+    final h = hour ?? _prefs?.hour ?? 8;
+    final m = minute ?? _prefs?.minute ?? 0;
+    await BriefingPrefs.save(enabled: enabled, hour: h, minute: m);
+    if (!mounted) return;
+    setState(() => _prefs = BriefingPrefs(enabled: enabled, hour: h, minute: m));
+    final events = ref.read(eventsStreamProvider).valueOrNull ?? [];
+    await NotificationService().scheduleBriefings(
+      events: events,
+      enabled: enabled,
+      hour: h,
+      minute: m,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final prefs = _prefs;
+    if (prefs == null) return const SizedBox.shrink();
+    return Column(
+      children: [
+        SwitchListTile(
+          secondary: const Icon(Icons.wb_sunny_outlined),
+          title: const Text('아침 브리핑'),
+          subtitle: const Text('매일 아침 오늘 일정 요약 알림 (일정 없는 날 제외)'),
+          value: prefs.enabled,
+          onChanged: (v) => _apply(enabled: v),
+        ),
+        if (prefs.enabled)
+          ListTile(
+            contentPadding: const EdgeInsets.only(left: 72, right: 16),
+            title: const Text('브리핑 시간'),
+            trailing: Text(
+              '${prefs.hour.toString().padLeft(2, '0')}:${prefs.minute.toString().padLeft(2, '0')}',
+              style: const TextStyle(fontSize: 16),
+            ),
+            onTap: () async {
+              final picked = await showTimePicker(
+                context: context,
+                initialTime:
+                    TimeOfDay(hour: prefs.hour, minute: prefs.minute),
+              );
+              if (picked != null) {
+                _apply(
+                    enabled: true, hour: picked.hour, minute: picked.minute);
+              }
+            },
+          ),
+      ],
+    );
   }
 }
