@@ -7,6 +7,7 @@ import '../../providers/calendar_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/event_utils.dart';
 import '../event/event_list_tile.dart';
+import 'anniversary_chips.dart';
 import 'month_grid.dart';
 
 const _purple = kPrimaryPurple;
@@ -112,6 +113,16 @@ class CalendarScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+                  ),
+                  coupleAsync.maybeWhen(
+                    data: (couple) => couple == null
+                        ? const SizedBox.shrink()
+                        : Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: AnniversaryChips(
+                                anniversaries: couple.anniversaries),
+                          ),
+                    orElse: () => const SizedBox.shrink(),
                   ),
                   Row(
                     children: List.generate(7, (i) {
