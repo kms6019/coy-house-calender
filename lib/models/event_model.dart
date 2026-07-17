@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+enum RepeatRule { none, daily, weekly, monthly, yearly }
+
 class EventModel {
   final String id;
   final String coupleId;
@@ -15,6 +17,9 @@ class EventModel {
   final int alarmMinutesBefore;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final RepeatRule repeat;
+  final DateTime? repeatUntil;
+  final List<DateTime> excludedDates;
 
   const EventModel({
     required this.id,
@@ -30,6 +35,9 @@ class EventModel {
     required this.alarmMinutesBefore,
     required this.createdAt,
     required this.updatedAt,
+    this.repeat = RepeatRule.none,
+    this.repeatUntil,
+    this.excludedDates = const [],
   });
 
   Color get colorValue => Color(color);
@@ -51,6 +59,16 @@ class EventModel {
       alarmMinutesBefore: map['alarmMinutesBefore'] as int? ?? 30,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      repeat: RepeatRule.values.asNameMap()[map['repeat'] as String? ?? 'none'] ??
+          RepeatRule.none,
+      repeatUntil: map['repeatUntil'] != null
+          ? (map['repeatUntil'] as Timestamp).toDate()
+          : null,
+      excludedDates: (map['excludedDates'] as List?)
+              ?.whereType<Timestamp>()
+              .map((t) => t.toDate())
+              .toList() ??
+          const [],
     );
   }
 
@@ -69,6 +87,10 @@ class EventModel {
       'alarmMinutesBefore': alarmMinutesBefore,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'repeat': repeat.name,
+      'repeatUntil':
+          repeatUntil != null ? Timestamp.fromDate(repeatUntil!) : null,
+      'excludedDates': excludedDates.map(Timestamp.fromDate).toList(),
     };
   }
 
@@ -97,6 +119,35 @@ class EventModel {
       alarmMinutesBefore: alarmMinutesBefore ?? this.alarmMinutesBefore,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      repeat: repeat,
+      repeatUntil: repeatUntil,
+      excludedDates: excludedDates,
+    );
+  }
+
+  /// repeatUntil을 null로 덮어쓸 수 있는 반복 전용 copy (copyWith는 null 병합이라 해제 불가)
+  EventModel copyWithRepeat({
+    required RepeatRule repeat,
+    required DateTime? repeatUntil,
+    List<DateTime>? excludedDates,
+  }) {
+    return EventModel(
+      id: id,
+      coupleId: coupleId,
+      createdByUid: createdByUid,
+      title: title,
+      description: description,
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+      isAllDay: isAllDay,
+      color: color,
+      hasAlarm: hasAlarm,
+      alarmMinutesBefore: alarmMinutesBefore,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      repeat: repeat,
+      repeatUntil: repeatUntil,
+      excludedDates: excludedDates ?? this.excludedDates,
     );
   }
 }
