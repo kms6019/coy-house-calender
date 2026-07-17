@@ -125,3 +125,18 @@ Caveats:
 - Widget updates only when app runs (foreground/background within ~30s)
 - Widget shows cached data, not live Firestore stream
 - `table_calendar` UI cannot be reused in widget (different rendering path)
+
+## 코딩 가이드라인
+Behavioral guidelines to reduce common LLM coding mistakes. Tradeoff: biases toward caution over speed. Use judgment for trivial tasks.
+
+### 1. Think Before Coding
+Before implementing: state assumptions explicitly, surface tradeoffs, present multiple interpretations if they exist, ask when unclear.
+
+### 2. Simplicity First
+Minimum code that solves the problem. No speculative features, no unnecessary abstractions, no unrequested configurability. If 200 lines could be 50, rewrite it.
+
+### 3. Surgical Changes
+Touch only what you must. Don't improve adjacent code or refactor unrelated things. Match existing style. When your changes create orphans (unused imports/vars/functions), remove them — but don't remove pre-existing dead code unless asked.
+
+### 4. Goal-Driven Execution
+Transform tasks into verifiable goals. For multi-step tasks, state a brief plan with verify steps. Loop until verified.

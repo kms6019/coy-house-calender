@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import '../models/event_model.dart';
+import '../utils/event_utils.dart';
 
 class WidgetService {
   static const _androidProvider = 'CalendarWidgetProvider';
@@ -17,10 +18,7 @@ class WidgetService {
     try {
       final now = DateTime.now();
       final today = DateUtils.dateOnly(now);
-      final todayEvents = allEvents
-          .where((e) => DateUtils.dateOnly(e.startDateTime) == today)
-          .take(3)
-          .toList();
+      final todayEvents = eventsForDay(allEvents, today).take(3).toList();
 
       final eventsJson = jsonEncode(todayEvents.map((e) {
         final timeFmt = DateFormat('HH:mm');

@@ -95,7 +95,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     setState(() => _loading = true);
 
     final userModel = ref.read(currentUserModelProvider).valueOrNull;
-    if (userModel == null) {
+    final authUid = ref.read(authStateProvider).valueOrNull?.uid;
+    if (userModel == null || authUid == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('사용자 정보를 불러오지 못했습니다.')),
@@ -109,7 +110,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     final coupleId = couple?.coupleId ?? userModel.coupleId;
 
     final color = couple != null
-        ? (couple.ownerUid == userModel.uid
+        ? (couple.ownerUid == authUid
             ? couple.ownerColor
             : couple.partnerColor)
         : 0xFF42A5F5;
@@ -122,7 +123,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         final draft = EventModel(
           id: '',
           coupleId: coupleId,
-          createdByUid: userModel.uid,
+          createdByUid: authUid,
           title: _titleCtrl.text.trim(),
           description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
           startDateTime: _startDateTime,
@@ -240,9 +241,10 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         actions: [
           TextButton(
             onPressed: _loading ? null : _save,
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
             child: _loading
                 ? const SizedBox(width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Text('저장'),
           ),
         ],

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
+import '../../theme/app_theme.dart';
 
 class InviteScreen extends ConsumerStatefulWidget {
   const InviteScreen({super.key});
@@ -97,7 +98,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.link, size: 56, color: Color(0xFF42A5F5)),
+              const Icon(Icons.link, size: 56, color: kPrimaryPurple),
               const SizedBox(height: 16),
               Text(
                 '파트너와 캘린더를 연결하세요',

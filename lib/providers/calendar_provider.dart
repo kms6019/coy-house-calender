@@ -23,17 +23,6 @@ final eventsStreamProvider = StreamProvider<List<EventModel>>((ref) {
   return ref.watch(firestoreServiceProvider).eventsStream(coupleId);
 });
 
-// 날짜별 이벤트 맵 (table_calendar용)
-final eventsByDateProvider = Provider<Map<DateTime, List<EventModel>>>((ref) {
-  final events = ref.watch(eventsStreamProvider).valueOrNull ?? [];
-  final map = <DateTime, List<EventModel>>{};
-  for (final event in events) {
-    final day = DateUtils.dateOnly(event.startDateTime);
-    map.putIfAbsent(day, () => []).add(event);
-  }
-  return map;
-});
-
 // 이벤트 변경 시 홈 위젯 자동 갱신
 final widgetSyncProvider = Provider<void>((ref) {
   final events = ref.watch(eventsStreamProvider).valueOrNull;
@@ -45,9 +34,4 @@ final widgetSyncProvider = Provider<void>((ref) {
 // 선택된 날짜
 final selectedDateProvider = StateProvider<DateTime>((ref) => DateUtils.dateOnly(DateTime.now()));
 
-// 선택 날짜의 이벤트 목록
-final selectedDayEventsProvider = Provider<List<EventModel>>((ref) {
-  final selected = ref.watch(selectedDateProvider);
-  final map = ref.watch(eventsByDateProvider);
-  return map[selected] ?? [];
-});
+final focusedDateProvider = StateProvider<DateTime>((ref) => DateUtils.dateOnly(DateTime.now()));

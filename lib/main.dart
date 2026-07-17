@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'router/app_router.dart';
 import 'services/notification_service.dart';
+import 'theme/app_theme.dart';
 
 // 백그라운드 FCM 핸들러 (최상위 함수여야 함)
 @pragma('vm:entry-point')
@@ -58,8 +59,13 @@ class CoyHouseCalenderApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFF48FB1),
+          seedColor: kPrimaryPurple,
           brightness: Brightness.light,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: kPrimaryPurple,
+          foregroundColor: Colors.white,
+          elevation: 0,
         ),
         useMaterial3: true,
       ),

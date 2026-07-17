@@ -15,7 +15,7 @@ class EventDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUid = ref.watch(authStateProvider).valueOrNull?.uid;
-    final isOwner = event.createdByUid == currentUid;
+    final isOwner = event.createdByUid == currentUid || event.createdByUid.isEmpty;
 
     return Scaffold(
       appBar: AppBar(
