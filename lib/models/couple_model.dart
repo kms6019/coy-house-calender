@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'anniversary_model.dart';
 
 class CoupleModel {
   final String coupleId;
@@ -10,6 +11,7 @@ class CoupleModel {
   final int ownerColor;
   final int partnerColor;
   final DateTime createdAt;
+  final List<AnniversaryModel> anniversaries;
 
   const CoupleModel({
     required this.coupleId,
@@ -20,6 +22,7 @@ class CoupleModel {
     required this.ownerColor,
     required this.partnerColor,
     required this.createdAt,
+    this.anniversaries = const [],
   });
 
   Color get ownerColorValue => Color(ownerColor);
@@ -35,7 +38,21 @@ class CoupleModel {
       ownerColor: map['ownerColor'] as int? ?? Colors.blue.toARGB32(),
       partnerColor: map['partnerColor'] as int? ?? Colors.pink.toARGB32(),
       createdAt: (map['createdAt'] as Timestamp).toDate(),
+      anniversaries: _parseAnniversaries(map['anniversaries']),
     );
+  }
+
+  static List<AnniversaryModel> _parseAnniversaries(dynamic raw) {
+    if (raw is! List) return const [];
+    final result = <AnniversaryModel>[];
+    for (final item in raw) {
+      try {
+        result.add(AnniversaryModel.fromMap(Map<String, dynamic>.from(item as Map)));
+      } catch (_) {
+        // 불량 항목 개별 스킵
+      }
+    }
+    return result;
   }
 
   Map<String, dynamic> toMap() {
@@ -48,6 +65,7 @@ class CoupleModel {
       'ownerColor': ownerColor,
       'partnerColor': partnerColor,
       'createdAt': Timestamp.fromDate(createdAt),
+      'anniversaries': anniversaries.map((a) => a.toMap()).toList(),
     };
   }
 
@@ -56,6 +74,7 @@ class CoupleModel {
     bool? isLinked,
     int? ownerColor,
     int? partnerColor,
+    List<AnniversaryModel>? anniversaries,
   }) {
     return CoupleModel(
       coupleId: coupleId,
@@ -66,6 +85,7 @@ class CoupleModel {
       ownerColor: ownerColor ?? this.ownerColor,
       partnerColor: partnerColor ?? this.partnerColor,
       createdAt: createdAt,
+      anniversaries: anniversaries ?? this.anniversaries,
     );
   }
 }
