@@ -64,6 +64,19 @@ lib/screens/calendar/month_grid.dart의 월간 그리드 디자인을 개선해�
 - 빈 화면 나오면: 다른 탭 전부 닫기 → flutter 프로세스 재시작 → 보려는 탭 하나만 리로드 (첫 클라이언트가 되게).
 - 여러 탭/사람이 동시에 봐야 하면 `flutter run -d web-server --release` (핫리로드 포기).
 
+### Codex 서브에이전트 디스패치 (토큰 절약)
+
+Claude 세션의 토큰을 아끼기 위해 기계적 작업(구현 전사, 분석, 집계)을 Codex로 넘긴다:
+
+```powershell
+# 프롬프트를 파일로 쓰고 디스패치 (-Write = 파일 수정 허용)
+.\scripts\codex-task.ps1 -PromptFile 프롬프트.md -Title 이름 [-Write] [-TimeoutSec 600]
+```
+
+- Orca 터미널로 떠서 UI에서 실시간 관찰 가능, 완료 시 출력 반환 + 터미널 자동 닫힘
+- 역할 분담: **구현/집계 = Codex**, 오케스트레이션·리뷰 판단·최종 브랜치 리뷰 = Claude
+- codex 설정: gpt-5.5, sandbox workspace-write, approval never (계정 기본값)
+
 ### Orca CLI로 내장 브라우저 조작
 ```powershell
 $orca = "$env:LOCALAPPDATA\Programs\orca\resources\bin\orca.exe"
