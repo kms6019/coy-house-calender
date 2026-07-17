@@ -4,6 +4,7 @@ import '../models/anniversary_model.dart';
 import '../models/couple_model.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
+import '../models/wish_model.dart';
 import '../theme/couple_palette.dart';
 
 class FirestoreService {
@@ -170,5 +171,48 @@ class FirestoreService {
 
   Future<void> deleteEvent(String eventId) {
     return _db.collection('events').doc(eventId).delete();
+  }
+
+  // ── Wishes ──────────────────────────────────────────────
+
+  Stream<List<WishModel>> wishesStream(String coupleId) {
+    return _db
+        .collection('wishes')
+        .where('coupleId', isEqualTo: coupleId)
+        .snapshots()
+        .map((snap) {
+          final list = <WishModel>[];
+          for (final doc in snap.docs) {
+            try {
+              list.add(WishModel.fromMap(doc.data()));
+            } catch (_) {
+              // 불량 문서 스킵
+            }
+          }
+          return list;
+        });
+  }
+
+  Future<WishModel> addWish(WishModel draft) async {
+    final id = _uuid.v4();
+    final wish = WishModel(
+      id: id,
+      coupleId: draft.coupleId,
+      createdByUid: draft.createdByUid,
+      title: draft.title,
+      memo: draft.memo,
+      done: false,
+      createdAt: DateTime.now(),
+    );
+    await _db.collection('wishes').doc(id).set(wish.toMap());
+    return wish;
+  }
+
+  Future<void> updateWish(WishModel wish) {
+    return _db.collection('wishes').doc(wish.id).update(wish.toMap());
+  }
+
+  Future<void> deleteWish(String wishId) {
+    return _db.collection('wishes').doc(wishId).delete();
   }
 }

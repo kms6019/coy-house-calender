@@ -39,5 +39,12 @@ service cloud.firestore {
         request.resource.data.coupleId == myCoupleId() &&
         request.resource.data.createdByUid == request.auth.uid;
     }
+
+    match /wishes/{wishId} {
+      allow read, update, delete: if signedIn() && resource.data.coupleId == myCoupleId();
+      allow create: if signedIn() &&
+        request.resource.data.coupleId == myCoupleId() &&
+        request.resource.data.createdByUid == request.auth.uid;
+    }
   }
 }

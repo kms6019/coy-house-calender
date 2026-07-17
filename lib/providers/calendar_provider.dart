@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/event_model.dart';
 import '../models/couple_model.dart';
+import '../models/wish_model.dart';
 import '../services/firestore_service.dart';
 import '../services/briefing_prefs.dart';
 import '../services/notification_service.dart';
@@ -23,6 +24,13 @@ final eventsStreamProvider = StreamProvider<List<EventModel>>((ref) {
   final coupleId = userAsync.valueOrNull?.coupleId ?? '';
   if (coupleId.isEmpty) return Stream.value([]);
   return ref.watch(firestoreServiceProvider).eventsStream(coupleId);
+});
+
+final wishesStreamProvider = StreamProvider<List<WishModel>>((ref) {
+  final userAsync = ref.watch(currentUserModelProvider);
+  final coupleId = userAsync.valueOrNull?.coupleId ?? '';
+  if (coupleId.isEmpty) return Stream.value([]);
+  return ref.watch(firestoreServiceProvider).wishesStream(coupleId);
 });
 
 // 이벤트/기념일 변경 시 홈 위젯 자동 갱신
