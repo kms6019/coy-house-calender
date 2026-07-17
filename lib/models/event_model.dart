@@ -20,6 +20,7 @@ class EventModel {
   final RepeatRule repeat;
   final DateTime? repeatUntil;
   final List<DateTime> excludedDates;
+  final String? icon;
 
   const EventModel({
     required this.id,
@@ -38,6 +39,7 @@ class EventModel {
     this.repeat = RepeatRule.none,
     this.repeatUntil,
     this.excludedDates = const [],
+    this.icon,
   });
 
   Color get colorValue => Color(color);
@@ -69,6 +71,7 @@ class EventModel {
               .map((t) => t.toDate())
               .toList() ??
           const [],
+      icon: map['icon'] as String?,
     );
   }
 
@@ -91,6 +94,7 @@ class EventModel {
       'repeatUntil':
           repeatUntil != null ? Timestamp.fromDate(repeatUntil!) : null,
       'excludedDates': excludedDates.map(Timestamp.fromDate).toList(),
+      'icon': icon,
     };
   }
 
@@ -122,6 +126,30 @@ class EventModel {
       repeat: repeat,
       repeatUntil: repeatUntil,
       excludedDates: excludedDates,
+      icon: icon,
+    );
+  }
+
+  /// icon을 null로 덮어쓸 수 있는 전용 copy (copyWith는 null 병합)
+  EventModel copyWithIcon(String? icon) {
+    return EventModel(
+      id: id,
+      coupleId: coupleId,
+      createdByUid: createdByUid,
+      title: title,
+      description: description,
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+      isAllDay: isAllDay,
+      color: color,
+      hasAlarm: hasAlarm,
+      alarmMinutesBefore: alarmMinutesBefore,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      repeat: repeat,
+      repeatUntil: repeatUntil,
+      excludedDates: excludedDates,
+      icon: icon,
     );
   }
 
@@ -148,6 +176,7 @@ class EventModel {
       repeat: repeat,
       repeatUntil: repeatUntil,
       excludedDates: excludedDates ?? this.excludedDates,
+      icon: icon,
     );
   }
 }

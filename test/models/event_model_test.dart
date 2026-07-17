@@ -75,4 +75,28 @@ void main() {
     expect(copied.repeat, RepeatRule.monthly);
     expect(copied.excludedDates.length, 1);
   });
+
+  group('icon 필드', () {
+    test('필드 없는 구 문서는 null', () {
+      expect(EventModel.fromMap(_baseMap()).icon, isNull);
+    });
+
+    test('직렬화 왕복', () {
+      final e = EventModel.fromMap(_baseMap()..['icon'] = '🎂');
+      expect(e.icon, '🎂');
+      expect(e.toMap()['icon'], '🎂');
+    });
+
+    test('copyWith는 icon 보존', () {
+      final e = EventModel.fromMap(_baseMap()..['icon'] = '🎂');
+      expect(e.copyWith(title: 'x').icon, '🎂');
+    });
+
+    test('copyWithIcon은 null로 해제 가능', () {
+      final e = EventModel.fromMap(_baseMap()..['icon'] = '🎂');
+      expect(e.copyWithIcon(null).icon, isNull);
+      expect(e.copyWithIcon('⭐').icon, '⭐');
+      expect(e.copyWithIcon('⭐').title, e.title);
+    });
+  });
 }
