@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../models/couple_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../services/notification_service.dart';
+import '../../theme/couple_palette.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -70,14 +72,21 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: isOwner
-                                ? couple.ownerColorValue
-                                : couple.partnerColorValue,
-                            shape: BoxShape.circle,
+                        GestureDetector(
+                          onTap: myUid == null
+                              ? null
+                              : () => _pickMyColor(context, ref, couple, myUid),
+                          child: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: isOwner
+                                  ? couple.ownerColorValue
+                                  : couple.partnerColorValue,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.edit,
+                                size: 12, color: Colors.white70),
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -164,6 +173,66 @@ class SettingsScreen extends ConsumerWidget {
       await NotificationService().cancelAll();
       await ref.read(authServiceProvider).signOut();
       if (context.mounted) context.go('/login');
+    }
+  }
+
+  Future<void> _pickMyColor(BuildContext context, WidgetRef ref,
+      CoupleModel couple, String myUid) async {
+    final isOwner = couple.ownerUid == myUid;
+    final myColor = isOwner ? couple.ownerColor : couple.partnerColor;
+    final partnerColor = isOwner ? couple.partnerColor : couple.ownerColor;
+
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('내 색상'),
+        content: SizedBox(
+          width: 280,
+          child: GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 4,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            children: kCouplePalette.map((c) {
+              final isMine = c == myColor;
+              final isPartner = c == partnerColor;
+              return InkWell(
+                onTap: isPartner ? null : () => Navigator.pop(ctx, c),
+                customBorder: const CircleBorder(),
+                child: Opacity(
+                  opacity: isPartner ? 0.25 : 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Color(c),
+                      shape: BoxShape.circle,
+                    ),
+                    child: isMine
+                        ? const Icon(Icons.check, color: Colors.white)
+                        : null,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+        ],
+      ),
+    );
+
+    if (picked == null || picked == myColor) return;
+    try {
+      await ref
+          .read(firestoreServiceProvider)
+          .updateMyColor(couple: couple, myUid: myUid, color: picked);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('일부 일정 색이 변경되지 않았습니다.')),
+        );
+      }
     }
   }
 }
