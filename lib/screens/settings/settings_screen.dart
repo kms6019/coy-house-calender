@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/couple_model.dart';
@@ -49,7 +50,7 @@ class SettingsScreen extends ConsumerWidget {
           // 파트너 연결 상태
           coupleAsync.when(
             data: (couple) {
-              if (couple == null || !couple.isLinked) {
+              if (couple == null) {
                 return ListTile(
                   leading: const Icon(Icons.favorite_border, color: Colors.grey),
                   title: const Text('파트너 연결'),
@@ -57,6 +58,28 @@ class SettingsScreen extends ConsumerWidget {
                   trailing: TextButton(
                     onPressed: () => context.push('/invite'),
                     child: const Text('연결하기'),
+                  ),
+                );
+              }
+              if (!couple.isLinked) {
+                // 커플 생성됨·파트너 대기 중: /invite는 coupleId 있으면 튕기므로
+                // 초대 코드를 여기서 바로 보여준다
+                return ListTile(
+                  leading:
+                      const Icon(Icons.favorite_border, color: Colors.grey),
+                  title: const Text('파트너 연결 대기 중'),
+                  subtitle: Text(
+                      '초대 코드: ${couple.inviteCode}\n파트너가 이 코드를 입력하면 연결됩니다'),
+                  isThreeLine: true,
+                  trailing: IconButton(
+                    icon: const Icon(Icons.copy, size: 20),
+                    onPressed: () {
+                      Clipboard.setData(
+                          ClipboardData(text: couple.inviteCode));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('코드가 복사되었습니다')),
+                      );
+                    },
                   ),
                 );
               }
