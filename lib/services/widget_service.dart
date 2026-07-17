@@ -28,7 +28,8 @@ class WidgetService {
       final eventsJson = jsonEncode(todayEvents.map((e) {
         final timeFmt = DateFormat('HH:mm');
         return {
-          'title': e.title,
+          'title':
+              e.icon?.isNotEmpty == true ? '${e.icon} ${e.title}' : e.title,
           'time': e.isAllDay ? '종일' : timeFmt.format(e.startDateTime),
         };
       }).toList());
