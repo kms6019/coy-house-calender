@@ -4,6 +4,7 @@ import '../models/anniversary_model.dart';
 import '../models/couple_model.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
+import '../theme/couple_palette.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -95,6 +96,32 @@ class FirestoreService {
     return _db.collection('couples').doc(coupleId).set({
       'anniversaries': anniversaries.map((a) => a.toMap()).toList(),
     }, SetOptions(merge: true));
+  }
+
+  /// 내 색상 변경: couples 문서 + 내가 만든 기존 이벤트 색 일괄 변경
+  Future<void> updateMyColor({
+    required CoupleModel couple,
+    required String myUid,
+    required int color,
+  }) async {
+    final field = myColorField(couple, myUid);
+    await _db
+        .collection('couples')
+        .doc(couple.coupleId)
+        .set({field: color}, SetOptions(merge: true));
+
+    final snap = await _db
+        .collection('events')
+        .where('coupleId', isEqualTo: couple.coupleId)
+        .where('createdByUid', isEqualTo: myUid)
+        .get();
+    for (var i = 0; i < snap.docs.length; i += 500) {
+      final batch = _db.batch();
+      for (final doc in snap.docs.skip(i).take(500)) {
+        batch.update(doc.reference, {'color': color});
+      }
+      await batch.commit();
+    }
   }
 
   // ── Events ──────────────────────────────────────────────
