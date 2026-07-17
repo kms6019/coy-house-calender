@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import '../models/event_model.dart';
+import '../utils/briefing_utils.dart';
 import '../utils/event_utils.dart';
 
 class NotificationService {
@@ -83,6 +84,60 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
+  }
+
+  int _briefingId(DateTime day) {
+    final ymd =
+        '${day.year}${day.month.toString().padLeft(2, '0')}${day.day.toString().padLeft(2, '0')}';
+    return 'briefing-$ymd'.hashCode.abs();
+  }
+
+  /// 아침 브리핑 재스케줄: 8일치 취소 후 enabled면 오늘부터 7일 등록.
+  /// 일정 없는 날·이미 지난 시각은 스킵.
+  Future<void> scheduleBriefings({
+    required List<EventModel> events,
+    required bool enabled,
+    required int hour,
+    required int minute,
+  }) async {
+    if (!_supported) return;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    for (var i = 0; i < 8; i++) {
+      await _plugin.cancel(_briefingId(today.add(Duration(days: i))));
+    }
+    if (!enabled) return;
+
+    for (var i = 0; i < 7; i++) {
+      final day = today.add(Duration(days: i));
+      final when = DateTime(day.year, day.month, day.day, hour, minute);
+      if (when.isBefore(now)) continue;
+      final content = briefingBody(eventsForDay(events, day));
+      if (content == null) continue;
+      try {
+        await _plugin.zonedSchedule(
+          _briefingId(day),
+          content.title,
+          content.body,
+          tz.TZDateTime.from(when, tz.local),
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'briefing_channel',
+              '아침 브리핑',
+              channelDescription: '오늘의 일정 요약',
+              importance: Importance.high,
+              priority: Priority.high,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      } catch (_) {
+        // 권한 없음 등 — 알람과 동일하게 무시
+      }
+    }
   }
 
   Future<void> cancelAlarm(String eventId) async {

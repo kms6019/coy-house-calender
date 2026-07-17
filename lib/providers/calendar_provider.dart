@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/event_model.dart';
 import '../models/couple_model.dart';
 import '../services/firestore_service.dart';
+import '../services/briefing_prefs.dart';
 import '../services/notification_service.dart';
 import '../services/widget_service.dart';
 import 'auth_provider.dart';
@@ -44,6 +45,16 @@ final alarmSyncProvider = Provider<void>((ref) {
       if (event.hasAlarm) ns.scheduleAlarm(event);
     });
   }
+
+  // 아침 브리핑 재스케줄 (기기 설정 기반)
+  BriefingPrefs.load().then((p) {
+    ns.scheduleBriefings(
+      events: events,
+      enabled: p.enabled,
+      hour: p.hour,
+      minute: p.minute,
+    );
+  });
 });
 
 // 선택된 날짜
