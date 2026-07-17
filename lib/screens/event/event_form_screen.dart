@@ -29,10 +29,19 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   bool _isAllDay = false;
   bool _hasAlarm = false;
   int _alarmMinutes = 30;
+  RepeatRule _repeat = RepeatRule.none;
+  DateTime? _repeatUntil;
   bool _loading = false;
 
   static const _alarmOptions = [0, 15, 30, 60, 1440];
   static const _alarmLabels = ['시작 시', '15분 전', '30분 전', '1시간 전', '하루 전'];
+  static const _repeatLabels = {
+    RepeatRule.none: '반복 없음',
+    RepeatRule.daily: '매일',
+    RepeatRule.weekly: '매주',
+    RepeatRule.monthly: '매월',
+    RepeatRule.yearly: '매년',
+  };
 
   @override
   void initState() {
@@ -49,6 +58,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       _isAllDay = widget.event!.isAllDay;
       _hasAlarm = widget.event!.hasAlarm;
       _alarmMinutes = widget.event!.alarmMinutesBefore;
+      _repeat = widget.event!.repeat;
+      _repeatUntil = widget.event!.repeatUntil;
       if (widget.event!.endDateTime != null) {
         _endDate = DateUtils.dateOnly(widget.event!.endDateTime!);
         _endTime = TimeOfDay.fromDateTime(widget.event!.endDateTime!);
@@ -134,6 +145,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           alarmMinutesBefore: _alarmMinutes,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
+          repeat: _repeat,
+          repeatUntil: _repeat == RepeatRule.none ? null : _repeatUntil,
         );
         saved = await fs.addEvent(draft);
       } else {
@@ -146,6 +159,12 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           hasAlarm: _hasAlarm,
           alarmMinutesBefore: _alarmMinutes,
           updatedAt: DateTime.now(),
+        );
+        saved = saved.copyWithRepeat(
+          repeat: _repeat,
+          repeatUntil: _repeat == RepeatRule.none ? null : _repeatUntil,
+          excludedDates:
+              _repeat == RepeatRule.none ? const [] : widget.event!.excludedDates,
         );
         await fs.updateEvent(saved);
       }
@@ -350,6 +369,50 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                   )),
                   onChanged: (v) => setState(() => _alarmMinutes = v ?? 30),
                 ),
+              ),
+            const Divider(),
+
+            // 반복
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.repeat),
+              title: const Text('반복'),
+              trailing: DropdownButton<RepeatRule>(
+                value: _repeat,
+                underline: const SizedBox.shrink(),
+                items: RepeatRule.values
+                    .map((r) => DropdownMenuItem(
+                          value: r,
+                          child: Text(_repeatLabels[r]!),
+                        ))
+                    .toList(),
+                onChanged: (v) => setState(() {
+                  _repeat = v ?? RepeatRule.none;
+                  if (_repeat == RepeatRule.none) _repeatUntil = null;
+                }),
+              ),
+            ),
+            if (_repeat != RepeatRule.none)
+              ListTile(
+                contentPadding: const EdgeInsets.only(left: 40),
+                title: Text(_repeatUntil != null
+                    ? '종료: ${dateFmtShort.format(_repeatUntil!)}'
+                    : '반복 종료일 (선택 안 함 = 계속 반복)'),
+                trailing: _repeatUntil != null
+                    ? IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () => setState(() => _repeatUntil = null),
+                      )
+                    : null,
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _repeatUntil ?? _startDate,
+                    firstDate: _startDate, // 시작일 이전 방지
+                    lastDate: DateTime(2030),
+                  );
+                  if (picked != null) setState(() => _repeatUntil = picked);
+                },
               ),
             const Divider(),
 
