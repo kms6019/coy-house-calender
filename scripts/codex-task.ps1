@@ -8,6 +8,8 @@ param(
     [string]$Title = "codex-task",
     [switch]$Write,
     [int]$TimeoutSec = 600,
+    [string]$Model = "gpt-5.6-sol",
+    [string]$Effort = "xhigh",
     [string]$Worktree = "path:C:/Users/pup99/StudioProjects/test_calender"
 )
 
@@ -18,7 +20,7 @@ $mode = if ($Write) { "--full-auto" } else { "" }
 $promptPath = (Resolve-Path $PromptFile).Path
 
 # Orca 터미널 생성 (pwsh에서 프롬프트 파일을 codex exec stdin으로)
-$cmd = "Get-Content '$promptPath' -Raw | codex exec $mode -; Write-Host '$marker'"
+$cmd = "Get-Content '$promptPath' -Raw | codex exec -m $Model -c model_reasoning_effort=`"$Effort`" $mode -; Write-Host '$marker'"
 $res = & $orca terminal create --worktree $Worktree --title $Title --command $cmd --json | ConvertFrom-Json
 if (-not $res.ok) { throw "terminal create failed: $($res | ConvertTo-Json -Depth 5)" }
 $handle = $res.result.terminal.handle
