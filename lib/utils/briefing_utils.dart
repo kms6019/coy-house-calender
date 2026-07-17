@@ -12,7 +12,8 @@ BriefingContent? briefingBody(List<EventModel> dayEvents) {
   if (dayEvents.isEmpty) return null;
   final timeFmt = DateFormat('HH:mm');
   final parts = dayEvents.take(3).map((e) {
-    final name = e.icon != null ? '${e.icon} ${e.title}' : e.title;
+    final name =
+        e.icon?.isNotEmpty == true ? '${e.icon} ${e.title}' : e.title;
     final time = e.isAllDay ? '종일' : timeFmt.format(e.startDateTime);
     return '$name ($time)';
   }).join(', ');
