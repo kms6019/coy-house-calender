@@ -14,19 +14,23 @@ excludedDates: [Timestamp] // '이 회차만 삭제'된 날짜(자정 정규화)
 
 `EventModel`에 대응 필드: `repeat` (enum `RepeatRule { none, daily, weekly, monthly, yearly }`), `repeatUntil: DateTime?`, `excludedDates: List<DateTime>`. `copyWith` 확장. 파싱 시 알 수 없는 repeat 값은 `none` 취급.
 
-## Occurrence 판정 (순수 함수, `lib/utils/event_utils.dart` 확장)
+## Occurrence 전개 (순수 함수, `lib/utils/event_utils.dart` 확장)
 
-`bool occursOn(EventModel event, DateTime day)`:
-- `repeat == none` → 기존 날짜 비교 로직 그대로
-- 공통 전제: `day`가 시작일(자정 기준) 이전이면 false, `repeatUntil` 이후면 false, `excludedDates`에 있으면 false
-- `daily`: 시작일 이후 매일 true
-- `weekly`: `day.weekday == start.weekday`
-- `monthly`: `day.day == start.day` (해당 월에 없는 날짜면 자연 스킵 — 예: 31일 시작이면 2월엔 안 뜸)
-- `yearly`: `day.month == start.month && day.day == start.day` (2/29는 평년 스킵)
+**주의: `MonthGrid`는 `eventsForDay`를 쓰지 않고 이벤트의 start/end로 자체 배치 계산을 한다.** 따라서 판정 함수가 아니라 **범위 전개(materialization)** 방식을 쓴다:
 
-`eventsForDay()`가 `occursOn`을 사용하도록 변경. 반복 이벤트의 표시 시각은 마스터의 시각을 해당 날짜로 옮긴 것 (기간 이벤트: start~end 시간 길이 유지, 종일은 종일).
+`List<EventModel> expandRecurringForRange(List<EventModel> events, DateTime rangeStart, DateTime rangeEnd)`:
+- `repeat == none` 이벤트는 그대로 통과
+- 반복 이벤트는 범위 안에 occurrence 시작일이 들어오는 회차마다 **복사본 EventModel** 생성 (같은 id, `startDateTime`/`endDateTime`을 해당 날짜로 이동, 기간·시각 유지). 멀티데이 이벤트가 범위에 걸치도록 rangeStart를 이벤트 길이만큼 앞으로 패딩해 계산
+- occurrence 시작일 규칙: `daily`=시작일 이후 매일 / `weekly`=같은 요일 / `monthly`=같은 일(日) (그 달에 없으면 스킵 — 31일 시작이면 2월 없음) / `yearly`=같은 월·일 (2/29는 평년 스킵)
+- `repeatUntil`(포함) 이후 회차 제외, `excludedDates`에 있는 날짜 회차 제외, 마스터 시작일 이전 회차 없음
 
-캘린더 그리드·일별 시트·홈위젯은 모두 `eventsForDay` 경유이므로 자동 반영.
+`DateTime? nextOccurrence(EventModel event, DateTime after)`: `after` 이후 첫 occurrence의 시작 DateTime. 없으면(=until 초과) null. 알림 스케줄에 사용.
+
+적용 지점:
+- `eventsForDay(events, day)` = `expandRecurringForRange(events, day, day)` 후 기존 필터 — 일별 시트·홈위젯 자동 반영
+- 캘린더 그리드: `calendar_screen.dart`에서 focused 월 범위로 전개한 리스트를 `MonthGrid`에 전달 (MonthGrid 내부 무수정)
+
+occurrence 복사본은 마스터와 같은 id를 가지므로 상세/수정/삭제는 자연히 마스터 문서 대상.
 
 ## 수정/삭제 시맨틱
 
@@ -53,7 +57,7 @@ excludedDates: [Timestamp] // '이 회차만 삭제'된 날짜(자정 정규화)
 
 - **이벤트 폼**: "반복" 선택 (없음/매일/매주/매월/매년, 기본 없음). 반복 선택 시 "반복 종료일" 옵션 행 노출 (미설정 = 계속 반복, 설정 해제 가능).
 - **상세 화면**: 반복 규칙 한 줄 표시 (예: "매주 반복 · 2026.12.31까지").
-- **캘린더 그리드/리스트**: 반복 이벤트에 반복 아이콘(작은 repeat 아이콘) 표시.
+- **일별 리스트(EventListTile)**: 반복 이벤트에 작은 repeat 아이콘 표시. (그리드 셀은 9.5px 텍스트라 공간 부족 — 아이콘 생략)
 
 ## 에러/엣지
 
