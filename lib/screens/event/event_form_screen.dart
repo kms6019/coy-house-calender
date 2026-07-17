@@ -285,7 +285,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, ''),
-              child: const Text('없음')),
+              child: const Text('아이콘 제거')),
           TextButton(
               onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
         ],
