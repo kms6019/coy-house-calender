@@ -10,6 +10,7 @@ import '../screens/event/event_form_screen.dart';
 import '../screens/event/event_detail_screen.dart' show EventDetailScreen, EventDetailArgs;
 import '../screens/settings/settings_screen.dart';
 import '../screens/settings/anniversary_screen.dart';
+import '../screens/report/report_screen.dart';
 import '../screens/wishlist/wishlist_screen.dart';
 import '../models/event_model.dart';
 
@@ -98,6 +99,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, _) => const AnniversaryScreen(),
       ),
       GoRoute(path: '/wishlist', builder: (context, _) => const WishlistScreen()),
+      GoRoute(path: '/report', builder: (context, _) => const ReportScreen()),
     ],
   );
 });

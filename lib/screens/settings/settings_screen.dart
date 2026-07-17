@@ -173,6 +173,15 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
 
+          // 월간 리포트
+          ListTile(
+            leading: const Icon(Icons.bar_chart_outlined),
+            title: const Text('월간 리포트'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/report'),
+          ),
+          const Divider(),
+
           // 아침 브리핑
           const _BriefingSection(),
           const Divider(),
