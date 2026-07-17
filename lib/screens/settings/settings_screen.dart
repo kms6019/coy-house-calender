@@ -307,7 +307,10 @@ class SettingsScreen extends ConsumerWidget {
                       shape: BoxShape.circle,
                     ),
                     child: isMine
-                        ? const Icon(Icons.check, color: Colors.white)
+                        ? Icon(Icons.check,
+                            color: Color(c).computeLuminance() > 0.5
+                                ? Colors.black54
+                                : Colors.white)
                         : null,
                   ),
                 ),
@@ -327,10 +330,11 @@ class SettingsScreen extends ConsumerWidget {
       await ref
           .read(firestoreServiceProvider)
           .updateMyColor(couple: couple, myUid: myUid, color: picked);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[Settings] updateMyColor error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('일부 일정 색이 변경되지 않았습니다.')),
+          const SnackBar(content: Text('색상 변경에 실패했습니다.')),
         );
       }
     }

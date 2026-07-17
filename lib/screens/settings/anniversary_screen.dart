@@ -205,7 +205,12 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
         FilledButton(
           onPressed: () {
             final title = _titleController.text.trim();
-            if (title.isEmpty) return;
+            if (title.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('제목을 입력하세요')),
+              );
+              return;
+            }
             Navigator.pop(
               context,
               AnniversaryModel(

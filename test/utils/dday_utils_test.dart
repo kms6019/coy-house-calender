@@ -25,6 +25,9 @@ void main() {
         'D+2',
       );
     });
+    test('미래 기준일은 시작까지 D-n', () {
+      expect(dDayLabel(_ann('countUp', DateTime(2026, 7, 20)), DateTime(2026, 7, 17)), 'D-3');
+    });
   });
 
   group('dDayLabel annual', () {

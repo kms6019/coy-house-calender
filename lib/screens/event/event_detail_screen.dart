@@ -190,7 +190,7 @@ class EventDetailScreen extends ConsumerWidget {
     final updated = master.copyWithRepeat(
       repeat: master.repeat,
       repeatUntil: master.repeatUntil,
-      excludedDates: [...master.excludedDates, day],
+      excludedDates: {...master.excludedDates, day}.toList(),
     );
     await ref.read(firestoreServiceProvider).updateEvent(updated);
     // 다음 알림이 이 회차였을 수 있으니 재스케줄

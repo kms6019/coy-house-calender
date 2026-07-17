@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart' show DateUtils;
 import '../models/anniversary_model.dart';
 
-/// countUp: 기준일 당일 = D+1 (사귄 날 당일을 1일로 센다)
+/// countUp: 기준일 당일 = D+1 (사귄 날 당일을 1일로 센다).
+/// 기준일이 미래면 시작까지 D-n로 표시.
 /// annual: 다음 도래일까지 D-n, 당일 D-Day
 String dDayLabel(AnniversaryModel a, DateTime now) {
   final today = DateUtils.dateOnly(now);
   final base = DateUtils.dateOnly(a.date);
   if (a.type == AnniversaryType.countUp) {
+    if (today.isBefore(base)) {
+      return 'D-${base.difference(today).inDays}';
+    }
     return 'D+${today.difference(base).inDays + 1}';
   }
   final diff = nextAnnualDate(base, today).difference(today).inDays;

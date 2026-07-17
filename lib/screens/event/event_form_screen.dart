@@ -235,7 +235,10 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: c == current
-                      ? const Icon(Icons.check, color: Colors.white)
+                      ? Icon(Icons.check,
+                          color: Color(c).computeLuminance() > 0.5
+                              ? Colors.black54
+                              : Colors.white)
                       : null,
                 ),
               );
