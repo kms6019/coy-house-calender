@@ -7,6 +7,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/samsung_calendar_sync_service.dart';
+import '../../theme/couple_palette.dart';
+import '../../theme/event_icons.dart';
 
 class EventFormScreen extends ConsumerStatefulWidget {
   final EventModel? event;
@@ -32,6 +34,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   RepeatRule _repeat = RepeatRule.none;
   DateTime? _repeatUntil;
   bool _loading = false;
+  int? _color; // null = 내 커플 색 (기본)
+  String? _icon;
 
   static const _alarmOptions = [0, 15, 30, 60, 1440];
   static const _alarmLabels = ['시작 시', '15분 전', '30분 전', '1시간 전', '하루 전'];
@@ -60,6 +64,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       _alarmMinutes = widget.event!.alarmMinutesBefore;
       _repeat = widget.event!.repeat;
       _repeatUntil = widget.event!.repeatUntil;
+      _color = widget.event!.color;
+      _icon = widget.event!.icon;
       if (widget.event!.endDateTime != null) {
         _endDate = DateUtils.dateOnly(widget.event!.endDateTime!);
         _endTime = TimeOfDay.fromDateTime(widget.event!.endDateTime!);
@@ -126,6 +132,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
             : couple.partnerColor)
         : 0xFF42A5F5;
 
+    final effectiveColor = _color ?? color;
+
     try {
       final fs = ref.read(firestoreServiceProvider);
       EventModel saved;
@@ -140,13 +148,14 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           startDateTime: _startDateTime,
           endDateTime: _endDateTime,
           isAllDay: _isAllDay,
-          color: color,
+          color: effectiveColor,
           hasAlarm: _hasAlarm,
           alarmMinutesBefore: _alarmMinutes,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
           repeat: _repeat,
           repeatUntil: _repeat == RepeatRule.none ? null : _repeatUntil,
+          icon: _icon,
         );
         saved = await fs.addEvent(draft);
       } else {
@@ -166,6 +175,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           excludedDates:
               _repeat == RepeatRule.none ? const [] : widget.event!.excludedDates,
         );
+        saved = saved.copyWith(color: effectiveColor).copyWithIcon(_icon);
         await fs.updateEvent(saved);
       }
 
@@ -201,6 +211,88 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _pickColor(int current) async {
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('색상 선택'),
+        content: SizedBox(
+          width: 280,
+          child: GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 4,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            children: kCouplePalette.map((c) {
+              return InkWell(
+                onTap: () => Navigator.pop(ctx, c),
+                customBorder: const CircleBorder(),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Color(c),
+                    shape: BoxShape.circle,
+                  ),
+                  child: c == current
+                      ? const Icon(Icons.check, color: Colors.white)
+                      : null,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+        ],
+      ),
+    );
+    if (picked != null) setState(() => _color = picked);
+  }
+
+  Future<void> _pickIcon() async {
+    // sentinel: '' = 없음 선택
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('아이콘 선택'),
+        content: SizedBox(
+          width: 300,
+          child: GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 6,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            children: kEventIcons.map((emoji) {
+              return InkWell(
+                onTap: () => Navigator.pop(ctx, emoji),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  alignment: Alignment.center,
+                  decoration: _icon == emoji
+                      ? BoxDecoration(
+                          color: Colors.deepPurple.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        )
+                      : null,
+                  child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, ''),
+              child: const Text('없음')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    setState(() => _icon = picked.isEmpty ? null : picked);
   }
 
   Future<void> _pickDate({required bool isStart}) async {
@@ -414,6 +506,44 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                   if (picked != null) setState(() => _repeatUntil = picked);
                 },
               ),
+            const Divider(),
+
+            // 색상
+            Builder(builder: (context) {
+              final couple = ref.watch(coupleStreamProvider).valueOrNull;
+              final authUid = ref.watch(authStateProvider).valueOrNull?.uid;
+              final defaultColor = couple != null
+                  ? (couple.ownerUid == authUid
+                      ? couple.ownerColor
+                      : couple.partnerColor)
+                  : 0xFF42A5F5;
+              final shown = _color ?? defaultColor;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.palette_outlined),
+                title: const Text('색상'),
+                trailing: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Color(shown),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                onTap: () => _pickColor(shown),
+              );
+            }),
+            // 아이콘
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.emoji_emotions_outlined),
+              title: const Text('아이콘'),
+              trailing: Text(_icon ?? '없음',
+                  style: TextStyle(
+                      fontSize: _icon != null ? 22 : 14,
+                      color: _icon != null ? null : Colors.grey)),
+              onTap: _pickIcon,
+            ),
             const Divider(),
 
             // 메모
