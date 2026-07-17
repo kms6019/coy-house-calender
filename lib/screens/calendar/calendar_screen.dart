@@ -108,6 +108,10 @@ class CalendarScreen extends ConsumerWidget {
                             ),
                           ),
                         IconButton(
+                          icon: const Icon(Icons.checklist, color: Colors.white),
+                          onPressed: () => context.push('/wishlist'),
+                        ),
+                        IconButton(
                           icon: const Icon(Icons.settings_outlined, color: Colors.white),
                           onPressed: () => context.push('/settings'),
                         ),

@@ -13,7 +13,9 @@ import '../../theme/event_icons.dart';
 class EventFormScreen extends ConsumerStatefulWidget {
   final EventModel? event;
   final DateTime? initialDate;
-  const EventFormScreen({super.key, this.event, this.initialDate});
+  final String? initialTitle;
+  const EventFormScreen(
+      {super.key, this.event, this.initialDate, this.initialTitle});
 
   @override
   ConsumerState<EventFormScreen> createState() => _EventFormScreenState();
@@ -70,6 +72,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         _endDate = DateUtils.dateOnly(widget.event!.endDateTime!);
         _endTime = TimeOfDay.fromDateTime(widget.event!.endDateTime!);
       }
+    } else if (widget.initialTitle != null) {
+      _titleCtrl.text = widget.initialTitle!;
     }
   }
 

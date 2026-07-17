@@ -10,6 +10,7 @@ import '../screens/event/event_form_screen.dart';
 import '../screens/event/event_detail_screen.dart' show EventDetailScreen, EventDetailArgs;
 import '../screens/settings/settings_screen.dart';
 import '../screens/settings/anniversary_screen.dart';
+import '../screens/wishlist/wishlist_screen.dart';
 import '../models/event_model.dart';
 
 class _RouterNotifier extends ChangeNotifier {
@@ -62,8 +63,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/event/new',
         builder: (_, state) {
-          final date = state.extra as DateTime?;
-          return EventFormScreen(initialDate: date);
+          final extra = state.extra;
+          if (extra is Map) {
+            return EventFormScreen(
+              initialDate: extra['date'] as DateTime?,
+              initialTitle: extra['title'] as String?,
+            );
+          }
+          return EventFormScreen(initialDate: extra as DateTime?);
         },
       ),
       GoRoute(
@@ -90,6 +97,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings/anniversaries',
         builder: (context, _) => const AnniversaryScreen(),
       ),
+      GoRoute(path: '/wishlist', builder: (context, _) => const WishlistScreen()),
     ],
   );
 });
