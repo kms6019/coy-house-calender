@@ -32,6 +32,20 @@
             android:textSize="11sp" />
     </LinearLayout>
 
+    <!-- D-Day -->
+    <TextView
+        android:id="@+id/widget_dday"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text=""
+        android:textColor="#FFC2185B"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:visibility="gone" />
+
     <!-- 구분선 -->
     <View
         android:layout_width="match_parent"

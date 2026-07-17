@@ -23,11 +23,13 @@ final eventsStreamProvider = StreamProvider<List<EventModel>>((ref) {
   return ref.watch(firestoreServiceProvider).eventsStream(coupleId);
 });
 
-// 이벤트 변경 시 홈 위젯 자동 갱신
+// 이벤트/기념일 변경 시 홈 위젯 자동 갱신
 final widgetSyncProvider = Provider<void>((ref) {
   final events = ref.watch(eventsStreamProvider).valueOrNull;
+  final couple = ref.watch(coupleStreamProvider).valueOrNull;
   if (events != null) {
-    WidgetService.update(events);
+    WidgetService.update(events,
+        anniversaries: couple?.anniversaries ?? const []);
   }
 });
 

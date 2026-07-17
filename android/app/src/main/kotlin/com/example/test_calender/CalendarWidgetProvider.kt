@@ -34,6 +34,14 @@ class CalendarWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.calendar_widget)
             views.setTextViewText(R.id.widget_today_label, todayLabel)
 
+            val ddayLine = prefs.getString("flutter.calendar_widget_dday", "") ?: ""
+            if (ddayLine.isNotEmpty()) {
+                views.setTextViewText(R.id.widget_dday, ddayLine)
+                views.setViewVisibility(R.id.widget_dday, View.VISIBLE)
+            } else {
+                views.setViewVisibility(R.id.widget_dday, View.GONE)
+            }
+
             val eventIds = listOf(R.id.widget_event_1, R.id.widget_event_2, R.id.widget_event_3)
             eventIds.forEach { views.setViewVisibility(it, View.GONE) }
             views.setViewVisibility(R.id.widget_no_events, View.GONE)

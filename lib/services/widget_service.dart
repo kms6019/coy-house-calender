@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
+import '../models/anniversary_model.dart';
 import '../models/event_model.dart';
+import '../utils/dday_utils.dart';
 import '../utils/event_utils.dart';
 
 class WidgetService {
@@ -13,7 +15,10 @@ class WidgetService {
   static bool get _supported =>
       !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
-  static Future<void> update(List<EventModel> allEvents) async {
+  static Future<void> update(
+    List<EventModel> allEvents, {
+    List<AnniversaryModel> anniversaries = const [],
+  }) async {
     if (!_supported) return;
     try {
       final now = DateTime.now();
@@ -35,9 +40,28 @@ class WidgetService {
           'calendar_widget_events', eventsJson);
       await HomeWidget.saveWidgetData<String>(
           'calendar_widget_today', todayLabel);
+      await HomeWidget.saveWidgetData<String>(
+          'calendar_widget_dday', _dDayLine(anniversaries, now));
       await HomeWidget.updateWidget(androidName: _androidProvider);
     } catch (e) {
       debugPrint('[WidgetService] update error: $e');
     }
+  }
+
+  /// 도래 임박 annual 1개 + 대표(가장 오래된) countUp 1개. 없으면 빈 문자열.
+  static String _dDayLine(List<AnniversaryModel> anniversaries, DateTime now) {
+    if (anniversaries.isEmpty) return '';
+    final sorted = sortedForDisplay(anniversaries, now);
+    final parts = <String>[];
+    final annual = sorted
+        .where((a) => a.type == AnniversaryType.annual)
+        .take(1);
+    final countUp = sorted
+        .where((a) => a.type == AnniversaryType.countUp)
+        .take(1);
+    for (final a in [...countUp, ...annual]) {
+      parts.add('${a.title} ${dDayLabel(a, now)}');
+    }
+    return parts.join(' · ');
   }
 }
