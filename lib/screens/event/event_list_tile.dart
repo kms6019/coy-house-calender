@@ -31,7 +31,8 @@ class EventListTile extends StatelessWidget {
           shape: BoxShape.circle,
         ),
       ),
-      title: Text(event.title),
+      title: Text(
+          event.icon != null ? '${event.icon} ${event.title}' : event.title),
       subtitle: Text(timeText, style: const TextStyle(fontSize: 12)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

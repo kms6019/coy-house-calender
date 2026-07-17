@@ -189,7 +189,9 @@ class _WeekRow extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      placement.event.title,
+                      placement.event.icon != null
+                          ? '${placement.event.icon} ${placement.event.title}'
+                          : placement.event.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.white, fontSize: 10),
@@ -303,15 +305,22 @@ class _DayCell extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 1),
                     child: Row(
                       children: [
-                        Container(
-                          width: 5,
-                          height: 5,
-                          margin: const EdgeInsets.only(right: 3),
-                          decoration: BoxDecoration(
-                            color: e.colorValue,
-                            shape: BoxShape.circle,
+                        if (e.icon != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 2),
+                            child: Text(e.icon!,
+                                style: const TextStyle(fontSize: 8)),
+                          )
+                        else
+                          Container(
+                            width: 5,
+                            height: 5,
+                            margin: const EdgeInsets.only(right: 3),
+                            decoration: BoxDecoration(
+                              color: e.colorValue,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
                         Expanded(
                           child: Text(
                             e.title,

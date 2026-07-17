@@ -63,7 +63,9 @@ class EventDetailScreen extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  event.title,
+                  event.icon != null
+                      ? '${event.icon} ${event.title}'
+                      : event.title,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
               ),
