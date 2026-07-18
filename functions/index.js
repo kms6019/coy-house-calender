@@ -95,6 +95,8 @@ async function sendToPartner(event, actorUid, notificationTitle) {
       title: `${actorName}님이 ${notificationTitle}`,
       body: when ? `${title} · ${when}` : title,
     },
+    // 수신 기기가 백그라운드에서 캘린더/위젯 동기화를 돌리도록 데이터 페이로드 동봉
+    data: { type: "event_sync" },
     android: { priority: "high" },
   });
 }

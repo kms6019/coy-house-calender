@@ -1,4 +1,6 @@
 import 'dart:io' show Platform;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -6,15 +8,47 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
+import 'models/anniversary_model.dart';
+import 'models/event_model.dart';
 import 'router/app_router.dart';
 import 'services/notification_service.dart';
+import 'services/samsung_calendar_sync_service.dart';
+import 'services/widget_service.dart';
 import 'theme/app_theme.dart';
 
 // 백그라운드 FCM 핸들러 (최상위 함수여야 함)
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // 백그라운드 수신 — 필요 시 로컬 알림 표시 가능
+  // 상대 일정 변경 푸시 → 앱 안 열어도 삼성캘린더/위젯 동기화
+  if (message.data['type'] != 'event_sync') return;
+  try {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final db = FirebaseFirestore.instance;
+    final userDoc = await db.collection('users').doc(uid).get();
+    final coupleId = userDoc.data()?['coupleId'] as String? ?? '';
+    if (coupleId.isEmpty) return;
+
+    final snap = await db
+        .collection('events')
+        .where('coupleId', isEqualTo: coupleId)
+        .get();
+    final events =
+        snap.docs.map((d) => EventModel.fromMap(d.data())).toList();
+
+    final coupleDoc = await db.collection('couples').doc(coupleId).get();
+    final anniversaries = (coupleDoc.data()?['anniversaries'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .map(AnniversaryModel.fromMap)
+            .toList() ??
+        const <AnniversaryModel>[];
+
+    await SamsungCalendarSyncService().syncAll(events);
+    await WidgetService.update(events, anniversaries: anniversaries);
+  } catch (_) {
+    // 백그라운드 동기화 실패는 조용히 무시 — 다음 앱 실행 때 따라잡음
+  }
 }
 
 Future<void> _initFcm() async {
