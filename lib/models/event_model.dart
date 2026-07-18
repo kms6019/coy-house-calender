@@ -21,6 +21,7 @@ class EventModel {
   final DateTime? repeatUntil;
   final List<DateTime> excludedDates;
   final String? icon;
+  final bool isShared;
 
   const EventModel({
     required this.id,
@@ -40,6 +41,7 @@ class EventModel {
     this.repeatUntil,
     this.excludedDates = const [],
     this.icon,
+    this.isShared = false,
   });
 
   Color get colorValue => Color(color);
@@ -72,6 +74,7 @@ class EventModel {
               .toList() ??
           const [],
       icon: map['icon'] as String?,
+      isShared: map['isShared'] as bool? ?? false,
     );
   }
 
@@ -95,6 +98,7 @@ class EventModel {
           repeatUntil != null ? Timestamp.fromDate(repeatUntil!) : null,
       'excludedDates': excludedDates.map(Timestamp.fromDate).toList(),
       'icon': icon,
+      'isShared': isShared,
     };
   }
 
@@ -108,6 +112,7 @@ class EventModel {
     bool? hasAlarm,
     int? alarmMinutesBefore,
     DateTime? updatedAt,
+    bool? isShared,
   }) {
     return EventModel(
       id: id,
@@ -127,6 +132,7 @@ class EventModel {
       repeatUntil: repeatUntil,
       excludedDates: excludedDates,
       icon: icon,
+      isShared: isShared ?? this.isShared,
     );
   }
 
@@ -150,6 +156,7 @@ class EventModel {
       repeatUntil: repeatUntil,
       excludedDates: excludedDates,
       icon: icon,
+      isShared: isShared,
     );
   }
 
@@ -177,6 +184,7 @@ class EventModel {
       repeatUntil: repeatUntil,
       excludedDates: excludedDates ?? this.excludedDates,
       icon: icon,
+      isShared: isShared,
     );
   }
 }

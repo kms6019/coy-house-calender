@@ -35,6 +35,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   int _alarmMinutes = 30;
   RepeatRule _repeat = RepeatRule.none;
   DateTime? _repeatUntil;
+  bool _isShared = false;
   bool _loading = false;
   int? _color; // null = 내 커플 색 (기본)
   String? _icon;
@@ -57,6 +58,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     _startTime = widget.event != null
         ? TimeOfDay.fromDateTime(widget.event!.startDateTime)
         : TimeOfDay.now();
+    _isShared = widget.event?.isShared ?? false;
 
     if (widget.event != null) {
       _titleCtrl.text = widget.event!.title;
@@ -160,6 +162,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           repeat: _repeat,
           repeatUntil: _repeat == RepeatRule.none ? null : _repeatUntil,
           icon: _icon,
+          isShared: _isShared,
         );
         saved = await fs.addEvent(draft);
       } else {
@@ -172,6 +175,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           hasAlarm: _hasAlarm,
           alarmMinutesBefore: _alarmMinutes,
           updatedAt: DateTime.now(),
+          isShared: _isShared,
         );
         saved = saved.copyWithRepeat(
           repeat: _repeat,
@@ -513,6 +517,13 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                   if (picked != null) setState(() => _repeatUntil = picked);
                 },
               ),
+            SwitchListTile(
+              title: const Text('함께하는 일정'),
+              secondary: const Icon(Icons.favorite, color: Colors.pink),
+              value: _isShared,
+              onChanged: (v) => setState(() => _isShared = v),
+              contentPadding: EdgeInsets.zero,
+            ),
             const Divider(),
 
             // 색상

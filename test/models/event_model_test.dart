@@ -76,6 +76,29 @@ void main() {
     expect(copied.excludedDates.length, 1);
   });
 
+  group('isShared 필드', () {
+    test('필드 없는 구 문서는 false', () {
+      expect(EventModel.fromMap(_baseMap()).isShared, isFalse);
+    });
+
+    test('직렬화 왕복', () {
+      final e = EventModel.fromMap(_baseMap()..['isShared'] = true);
+      final out = e.toMap();
+      expect(out['isShared'], isTrue);
+      expect(EventModel.fromMap(out).isShared, isTrue);
+    });
+
+    test('copyWith로 true 반영', () {
+      final e = EventModel.fromMap(_baseMap());
+      expect(e.copyWith(isShared: true).isShared, isTrue);
+    });
+
+    test('copyWith 미지정 시 보존', () {
+      final e = EventModel.fromMap(_baseMap()..['isShared'] = true);
+      expect(e.copyWith(title: 'x').isShared, isTrue);
+    });
+  });
+
   group('icon 필드', () {
     test('필드 없는 구 문서는 null', () {
       expect(EventModel.fromMap(_baseMap()).icon, isNull);

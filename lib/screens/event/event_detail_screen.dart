@@ -109,6 +109,16 @@ class EventDetailScreen extends ConsumerWidget {
                   : '${event.alarmMinutesBefore}분 전',
             ),
           ],
+          if (event.isShared) ...[
+            const SizedBox(height: 12),
+            const Row(
+              children: [
+                Icon(Icons.favorite, size: 20, color: Colors.pink),
+                SizedBox(width: 12),
+                Text('함께하는 일정'),
+              ],
+            ),
+          ],
           if (event.description != null && event.description!.isNotEmpty) ...[
             const SizedBox(height: 24),
             const Divider(),

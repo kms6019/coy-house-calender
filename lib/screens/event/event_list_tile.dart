@@ -32,7 +32,7 @@ class EventListTile extends StatelessWidget {
         ),
       ),
       title: Text(
-          event.icon != null ? '${event.icon} ${event.title}' : event.title),
+          '${event.icon != null ? '${event.icon} ${event.title}' : event.title}${event.isShared ? ' ❤️' : ''}'),
       subtitle: Text(timeText, style: const TextStyle(fontSize: 12)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
