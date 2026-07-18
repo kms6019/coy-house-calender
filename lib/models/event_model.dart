@@ -22,6 +22,7 @@ class EventModel {
   final List<DateTime> excludedDates;
   final String? icon;
   final bool isShared;
+  final String status;
 
   const EventModel({
     required this.id,
@@ -42,9 +43,11 @@ class EventModel {
     this.excludedDates = const [],
     this.icon,
     this.isShared = false,
+    this.status = 'confirmed',
   });
 
   Color get colorValue => Color(color);
+  bool get isProposed => status == 'proposed';
 
   factory EventModel.fromMap(Map<String, dynamic> map) {
     return EventModel(
@@ -75,6 +78,7 @@ class EventModel {
           const [],
       icon: map['icon'] as String?,
       isShared: map['isShared'] as bool? ?? false,
+      status: map['status'] as String? ?? 'confirmed',
     );
   }
 
@@ -99,6 +103,7 @@ class EventModel {
       'excludedDates': excludedDates.map(Timestamp.fromDate).toList(),
       'icon': icon,
       'isShared': isShared,
+      'status': status,
     };
   }
 
@@ -113,6 +118,7 @@ class EventModel {
     int? alarmMinutesBefore,
     DateTime? updatedAt,
     bool? isShared,
+    String? status,
   }) {
     return EventModel(
       id: id,
@@ -133,6 +139,7 @@ class EventModel {
       excludedDates: excludedDates,
       icon: icon,
       isShared: isShared ?? this.isShared,
+      status: status ?? this.status,
     );
   }
 
@@ -157,6 +164,7 @@ class EventModel {
       excludedDates: excludedDates,
       icon: icon,
       isShared: isShared,
+      status: status,
     );
   }
 
@@ -185,6 +193,7 @@ class EventModel {
       excludedDates: excludedDates ?? this.excludedDates,
       icon: icon,
       isShared: isShared,
+      status: status,
     );
   }
 }

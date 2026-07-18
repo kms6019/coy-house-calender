@@ -119,11 +119,52 @@ class EventDetailScreen extends ConsumerWidget {
               ],
             ),
           ],
+          if (event.isProposed) ...[
+            const SizedBox(height: 12),
+            const Row(
+              children: [
+                Icon(Icons.send_outlined, size: 20, color: Colors.grey),
+                SizedBox(width: 12),
+                Text('제안된 일정'),
+              ],
+            ),
+          ],
           if (event.description != null && event.description!.isNotEmpty) ...[
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 16),
             Text(event.description!),
+          ],
+          if (master.isProposed &&
+              currentUid != null &&
+              master.createdByUid != currentUid) ...[
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () async {
+                      await ref.read(firestoreServiceProvider).updateEvent(
+                            master.copyWith(
+                              status: 'confirmed',
+                              updatedAt: DateTime.now(),
+                            ),
+                            editorUid: currentUid,
+                          );
+                      if (context.mounted) context.pop();
+                    },
+                    child: const Text('수락'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _confirmReject(context, ref, master),
+                    child: const Text('거절'),
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
@@ -217,6 +258,31 @@ class EventDetailScreen extends ConsumerWidget {
     await ref.read(firestoreServiceProvider).deleteEvent(master.id);
     await NotificationService().cancelAlarm(master.id);
     await SamsungCalendarSyncService().syncEventDelete(master.id);
+    if (context.mounted) context.pop();
+  }
+
+  Future<void> _confirmReject(
+      BuildContext context, WidgetRef ref, EventModel master) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('제안 거절'),
+        content: const Text('이 제안을 거절하고 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('거절'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await ref.read(firestoreServiceProvider).deleteEvent(master.id);
     if (context.mounted) context.pop();
   }
 }

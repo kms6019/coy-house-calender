@@ -99,6 +99,35 @@ void main() {
     });
   });
 
+  group('status 필드', () {
+    test('필드 없는 구 문서는 confirmed', () {
+      expect(EventModel.fromMap(_baseMap()).status, 'confirmed');
+    });
+
+    test('proposed 직렬화 왕복', () {
+      final e = EventModel.fromMap(_baseMap()..['status'] = 'proposed');
+      final out = e.toMap();
+      expect(out['status'], 'proposed');
+      expect(EventModel.fromMap(out).status, 'proposed');
+    });
+
+    test('copyWith로 confirmed 반영', () {
+      final e = EventModel.fromMap(_baseMap()..['status'] = 'proposed');
+      expect(e.copyWith(status: 'confirmed').status, 'confirmed');
+    });
+
+    test('copyWith 미지정 시 보존', () {
+      final e = EventModel.fromMap(_baseMap()..['status'] = 'proposed');
+      expect(e.copyWith(title: 'x').status, 'proposed');
+    });
+
+    test('isProposed getter', () {
+      final proposed = EventModel.fromMap(_baseMap()..['status'] = 'proposed');
+      expect(proposed.isProposed, isTrue);
+      expect(EventModel.fromMap(_baseMap()).isProposed, isFalse);
+    });
+  });
+
   group('icon 필드', () {
     test('필드 없는 구 문서는 null', () {
       expect(EventModel.fromMap(_baseMap()).icon, isNull);

@@ -61,7 +61,7 @@ function formatStart(timestamp, isAllDay) {
   return isAllDay ? `${base} 종일` : `${base} ${get("hour")}:${get("minute")}`;
 }
 
-async function sendToPartner(event, actorUid, verb) {
+async function sendToPartner(event, actorUid, notificationTitle) {
   const db = admin.firestore();
 
   const coupleId = event.coupleId ?? "";
@@ -92,7 +92,7 @@ async function sendToPartner(event, actorUid, verb) {
   await admin.messaging().send({
     token: fcmToken,
     notification: {
-      title: `${actorName}님이 일정을 ${verb}했어요`,
+      title: `${actorName}님이 ${notificationTitle}`,
       body: when ? `${title} · ${when}` : title,
     },
     android: { priority: "high" },
@@ -102,14 +102,23 @@ async function sendToPartner(event, actorUid, verb) {
 exports.onEventCreated = onDocumentCreated("events/{eventId}", async (event) => {
   const data = event.data?.data();
   if (!data) return;
-  await sendToPartner(data, data.createdByUid ?? "", "등록");
+  const title =
+    data.status === "proposed" ? "일정을 제안했어요" : "일정을 등록했어요";
+  await sendToPartner(data, data.createdByUid ?? "", title);
 });
 
 exports.onEventUpdated = onDocumentUpdated("events/{eventId}", async (event) => {
   const before = event.data?.before?.data();
   const after = event.data?.after?.data();
   if (!before || !after) return;
-  if (!hasMeaningfulChange(before, after)) return;
   const actorUid = after.lastEditorUid ?? after.createdByUid ?? "";
-  await sendToPartner(after, actorUid, "수정");
+
+  // 제안 수락: proposed → confirmed 전이는 다른 필드 변경 없어도 발송
+  if (before.status === "proposed" && after.status === "confirmed") {
+    await sendToPartner(after, actorUid, "제안을 수락했어요");
+    return;
+  }
+
+  if (!hasMeaningfulChange(before, after)) return;
+  await sendToPartner(after, actorUid, "일정을 수정했어요");
 });

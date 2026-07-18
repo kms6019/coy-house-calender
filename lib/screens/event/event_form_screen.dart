@@ -36,6 +36,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   RepeatRule _repeat = RepeatRule.none;
   DateTime? _repeatUntil;
   bool _isShared = false;
+  bool _propose = false;
   bool _loading = false;
   int? _color; // null = 내 커플 색 (기본)
   String? _icon;
@@ -163,6 +164,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           repeatUntil: _repeat == RepeatRule.none ? null : _repeatUntil,
           icon: _icon,
           isShared: _isShared,
+          status: _propose ? 'proposed' : 'confirmed',
         );
         saved = await fs.addEvent(draft);
       } else {
@@ -189,7 +191,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
 
       final calendarSync = SamsungCalendarSyncService();
       if (widget.event == null) {
-        await calendarSync.syncEventCreate(saved);
+        if (!saved.isProposed) {
+          await calendarSync.syncEventCreate(saved);
+        }
       } else {
         await calendarSync.syncEventUpdate(saved);
       }
@@ -524,6 +528,14 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
               onChanged: (v) => setState(() => _isShared = v),
               contentPadding: EdgeInsets.zero,
             ),
+            if (widget.event == null)
+              SwitchListTile(
+                title: const Text('상대에게 제안'),
+                secondary: const Icon(Icons.send_outlined),
+                value: _propose,
+                onChanged: (v) => setState(() => _propose = v),
+                contentPadding: EdgeInsets.zero,
+              ),
             const Divider(),
 
             // 색상
