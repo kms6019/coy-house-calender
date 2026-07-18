@@ -106,6 +106,36 @@ class SamsungCalendarSyncService {
     }
   }
 
+  static bool _syncAllInProgress = false;
+
+  /// 커플 이벤트 전체 미러 동기화 — 상대가 올린 일정도 내 기기 캘린더에 반영.
+  /// 매핑에 없는 이벤트는 생성, 있는 이벤트는 갱신, 스트림에서 사라진 매핑은 삭제.
+  /// proposed(제안 중) 이벤트는 확정 전이므로 제외.
+  Future<void> syncAll(List<EventModel> events) async {
+    if (!_supported || _syncAllInProgress) return;
+    _syncAllInProgress = true;
+    try {
+      final map = await _mapping.loadAll();
+      final active = events.where((e) => !e.isProposed).toList();
+      for (final event in active) {
+        if (map.containsKey(event.id)) {
+          await syncEventUpdate(event);
+        } else {
+          await syncEventCreate(event);
+        }
+      }
+      final activeIds = active.map((e) => e.id).toSet();
+      for (final staleId
+          in map.keys.where((id) => !activeIds.contains(id)).toList()) {
+        await syncEventDelete(staleId);
+      }
+    } catch (e) {
+      debugPrint('[SamsungCalendarSync] syncAll error: $e');
+    } finally {
+      _syncAllInProgress = false;
+    }
+  }
+
   Future<void> syncEventDelete(String eventId) async {
     if (!_supported) return;
     try {

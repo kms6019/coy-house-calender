@@ -18,6 +18,8 @@ class CalendarEventMapping {
     await prefs.setString(_mapKey, jsonEncode(map));
   }
 
+  Future<Map<String, String>> loadAll() => _loadMap();
+
   Future<String?> getDeviceEventId(String firestoreEventId) async {
     final map = await _loadMap();
     return map[firestoreEventId];

@@ -6,6 +6,7 @@ import '../models/wish_model.dart';
 import '../services/firestore_service.dart';
 import '../services/briefing_prefs.dart';
 import '../services/notification_service.dart';
+import '../services/samsung_calendar_sync_service.dart';
 import '../services/widget_service.dart';
 import 'auth_provider.dart';
 
@@ -63,6 +64,16 @@ final alarmSyncProvider = Provider<void>((ref) {
       minute: p.minute,
     );
   });
+});
+
+// 커플 이벤트 전체를 기기(삼성) 캘린더에 미러 동기화 — 상대가 올린 일정 포함
+final deviceCalendarSyncProvider = Provider<void>((ref) {
+  final coupleId =
+      ref.watch(currentUserModelProvider).valueOrNull?.coupleId ?? '';
+  if (coupleId.isEmpty) return; // 로그아웃/연결 해제 시 기기 캘린더 삭제 방지
+  final events = ref.watch(eventsStreamProvider).valueOrNull;
+  if (events == null) return;
+  SamsungCalendarSyncService().syncAll(events);
 });
 
 // 선택된 날짜
