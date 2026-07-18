@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../models/event_model.dart';
 import '../../providers/calendar_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/dday_utils.dart';
 import '../../utils/event_utils.dart';
 import '../event/event_list_tile.dart';
 import 'anniversary_chips.dart';
@@ -20,10 +21,6 @@ class CalendarScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDay = ref.watch(selectedDateProvider);
     final focusedDay = ref.watch(focusedDateProvider);
-    final events = ref.watch(eventsStreamProvider).valueOrNull ?? [];
-    final monthStart = DateTime(focusedDay.year, focusedDay.month, 1);
-    final monthEnd = DateTime(focusedDay.year, focusedDay.month + 1, 0);
-    final expandedEvents = expandRecurringForRange(events, monthStart, monthEnd);
     final eventsAsync = ref.watch(eventsStreamProvider);
     final coupleAsync = ref.watch(coupleStreamProvider);
     ref.watch(widgetSyncProvider);
@@ -178,19 +175,7 @@ class CalendarScreen extends ConsumerWidget {
                         ],
                       ),
                     )
-                  : GestureDetector(
-                      onHorizontalDragEnd: (details) {
-                        final velocity = details.primaryVelocity ?? 0;
-                        if (velocity < -200) changeMonth(1); // 왼쪽으로 밀기 → 다음 달
-                        if (velocity > 200) changeMonth(-1); // 오른쪽으로 밀기 → 이전 달
-                      },
-                      child: MonthGrid(
-                        month: focusedDay,
-                        events: expandedEvents,
-                        selectedDay: selectedDay,
-                        onDayTap: openDay,
-                      ),
-                    ),
+                  : _MonthPager(onDayTap: openDay),
             ),
           ],
         ),
@@ -201,6 +186,89 @@ class CalendarScreen extends ConsumerWidget {
         label: const Text('오늘', style: TextStyle(color: Colors.white)),
         icon: const Icon(Icons.today, color: Colors.white),
       ),
+    );
+  }
+}
+
+/// 좌우 스와이프로 월 이동하는 페이저. 화살표/오늘 버튼(focusedDateProvider 변경)도
+/// 애니메이션으로 따라간다.
+class _MonthPager extends ConsumerStatefulWidget {
+  final ValueChanged<DateTime> onDayTap;
+  const _MonthPager({required this.onDayTap});
+
+  @override
+  ConsumerState<_MonthPager> createState() => _MonthPagerState();
+}
+
+class _MonthPagerState extends ConsumerState<_MonthPager> {
+  static final DateTime _base = DateTime(2020, 1);
+  late final PageController _controller;
+  bool _animating = false;
+
+  int _indexOf(DateTime month) =>
+      (month.year - _base.year) * 12 + (month.month - _base.month);
+
+  DateTime _monthAt(int index) => DateTime(_base.year, _base.month + index);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        PageController(initialPage: _indexOf(ref.read(focusedDateProvider)));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(focusedDateProvider, (prev, next) {
+      final target = _indexOf(next);
+      if (_controller.hasClients && _controller.page?.round() != target) {
+        _animating = true;
+        _controller
+            .animateToPage(
+              target,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            )
+            .whenComplete(() => _animating = false);
+      }
+    });
+
+    final selectedDay = ref.watch(selectedDateProvider);
+    final events = ref.watch(eventsStreamProvider).valueOrNull ?? [];
+    final anniversaries =
+        ref.watch(coupleStreamProvider).valueOrNull?.anniversaries ??
+            const [];
+
+    return PageView.builder(
+      controller: _controller,
+      onPageChanged: (index) {
+        if (_animating) return;
+        final month = _monthAt(index);
+        final current = ref.read(focusedDateProvider);
+        if (current.year != month.year || current.month != month.month) {
+          ref.read(focusedDateProvider.notifier).state = month;
+        }
+      },
+      itemBuilder: (context, index) {
+        final month = _monthAt(index);
+        final monthEnd = DateTime(month.year, month.month + 1, 0);
+        final expanded = expandRecurringForRange(events, month, monthEnd);
+        return MonthGrid(
+          month: month,
+          events: [
+            ...expanded,
+            ...anniversaryEventsForMonth(anniversaries, month),
+          ],
+          selectedDay: selectedDay,
+          onDayTap: widget.onDayTap,
+        );
+      },
     );
   }
 }

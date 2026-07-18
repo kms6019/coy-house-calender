@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' show DateUtils;
 import '../models/anniversary_model.dart';
+import '../models/event_model.dart';
 
 /// countUp: 기준일 당일 = D+1 (사귄 날 당일을 1일로 센다).
 /// 기준일이 미래면 시작까지 D-n로 표시.
@@ -41,4 +42,39 @@ List<AnniversaryModel> sortedForDisplay(List<AnniversaryModel> list, DateTime no
   final countUps = list.where((a) => a.type == AnniversaryType.countUp).toList()
     ..sort((a, b) => a.date.compareTo(b.date));
   return [...annuals, ...countUps];
+}
+
+/// 기념일을 해당 월 캘린더 셀에 표시할 가상 이벤트로 변환.
+/// annual은 매년 해당 월/일(말일 초과 시 말일), countUp은 원 날짜가 속한 달에만.
+List<EventModel> anniversaryEventsForMonth(
+    List<AnniversaryModel> anniversaries, DateTime month) {
+  final result = <EventModel>[];
+  for (final a in anniversaries) {
+    DateTime? day;
+    if (a.type == AnniversaryType.annual) {
+      if (a.date.month == month.month) {
+        final lastDay = DateUtils.getDaysInMonth(month.year, month.month);
+        day = DateTime(month.year, month.month,
+            a.date.day > lastDay ? lastDay : a.date.day);
+      }
+    } else if (a.date.year == month.year && a.date.month == month.month) {
+      day = DateTime(month.year, month.month, a.date.day);
+    }
+    if (day == null) continue;
+    result.add(EventModel(
+      id: 'anniversary-${a.id}',
+      coupleId: '',
+      createdByUid: '',
+      title: a.title,
+      startDateTime: day,
+      isAllDay: true,
+      color: 0xFFE91E63,
+      hasAlarm: false,
+      alarmMinutesBefore: 0,
+      createdAt: day,
+      updatedAt: day,
+      icon: '🎉',
+    ));
+  }
+  return result;
 }

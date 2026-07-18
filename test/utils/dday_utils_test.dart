@@ -82,4 +82,32 @@ void main() {
       expect(m['type'], 'annual');
     });
   });
+
+  group('anniversaryEventsForMonth', () {
+    test('annual은 매년 해당 월에 표시', () {
+      final list = anniversaryEventsForMonth(
+          [_ann('annual', DateTime(2020, 7, 15))], DateTime(2026, 7));
+      expect(list.length, 1);
+      expect(list.first.startDateTime, DateTime(2026, 7, 15));
+      expect(list.first.icon, '🎉');
+    });
+
+    test('annual 다른 달은 빈 리스트', () {
+      final list = anniversaryEventsForMonth(
+          [_ann('annual', DateTime(2020, 7, 15))], DateTime(2026, 8));
+      expect(list, isEmpty);
+    });
+
+    test('annual 2/29는 평년 2/28', () {
+      final list = anniversaryEventsForMonth(
+          [_ann('annual', DateTime(2024, 2, 29))], DateTime(2026, 2));
+      expect(list.first.startDateTime, DateTime(2026, 2, 28));
+    });
+
+    test('countUp은 원 날짜의 달에만 표시', () {
+      final a = _ann('countUp', DateTime(2025, 3, 10));
+      expect(anniversaryEventsForMonth([a], DateTime(2025, 3)).length, 1);
+      expect(anniversaryEventsForMonth([a], DateTime(2026, 3)), isEmpty);
+    });
+  });
 }
