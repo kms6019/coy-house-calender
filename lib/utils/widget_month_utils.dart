@@ -1,9 +1,11 @@
-/// 42칸. 각 칸 {'d': '15'|'', 'ev': bool, 'today': bool}
+/// 42칸. 각 칸 `{'d': '15'|'', 'ev': bool, 'today': bool, 't': List<String>}`
 /// 그리드 시작 = today가 속한 달 1일 주의 일요일. 이웃 달 칸은 d=''(ev/today false)
+/// t = 그 날 이벤트 제목 (titlesByDay에서, 최대 3개)
 List<Map<String, Object>> buildMonthCells(
   DateTime today,
-  Set<DateTime> eventDays,
-) {
+  Set<DateTime> eventDays, {
+  Map<DateTime, List<String>> titlesByDay = const {},
+}) {
   final normalizedToday = DateTime(today.year, today.month, today.day);
   final monthStart = DateTime(today.year, today.month);
   final rangeStart = monthStart.subtract(
@@ -15,13 +17,14 @@ List<Map<String, Object>> buildMonthCells(
     final isCurrentMonth = date.month == today.month && date.year == today.year;
 
     if (!isCurrentMonth) {
-      return {'d': '', 'ev': false, 'today': false};
+      return {'d': '', 'ev': false, 'today': false, 't': const <String>[]};
     }
 
     return {
       'd': date.day.toString(),
       'ev': eventDays.contains(date),
       'today': date == normalizedToday,
+      't': (titlesByDay[date] ?? const <String>[]).take(3).toList(),
     };
   });
 }

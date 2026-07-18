@@ -4,6 +4,11 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
 import android.widget.RemoteViews
 import org.json.JSONArray
 
@@ -92,11 +97,35 @@ class CalendarMonthWidgetProvider : AppWidgetProvider() {
                     val cellId = cellIds[i]
                     val day = obj.optString("d", "")
 
-                    views.setTextViewText(cellId, day)
                     views.setTextColor(cellId, Color.parseColor("#212121"))
                     views.setInt(cellId, "setBackgroundColor", Color.TRANSPARENT)
 
-                    if (day.isEmpty()) continue
+                    if (day.isEmpty()) {
+                        views.setTextViewText(cellId, "")
+                        continue
+                    }
+
+                    // 날짜 숫자(굵게) + 이벤트 제목들(작은 글씨) 멀티라인
+                    val text = SpannableStringBuilder(day)
+                    text.setSpan(
+                        StyleSpan(Typeface.BOLD),
+                        0, day.length,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                    val titles = obj.optJSONArray("t")
+                    if (titles != null) {
+                        for (t in 0 until titles.length()) {
+                            val start = text.length
+                            text.append("\n").append(titles.optString(t, ""))
+                            text.setSpan(
+                                RelativeSizeSpan(0.85f),
+                                start, text.length,
+                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                            )
+                        }
+                    }
+                    views.setTextViewText(cellId, text)
+
                     if (obj.optBoolean("ev", false)) {
                         views.setTextColor(cellId, Color.parseColor("#D81B60"))
                     }

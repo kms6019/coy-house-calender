@@ -104,63 +104,84 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_1"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_2"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_3"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_4"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_5"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_6"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -174,63 +195,84 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_8"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_9"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_10"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_11"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_12"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_13"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -244,63 +286,84 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_15"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_16"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_17"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_18"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_19"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_20"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -314,63 +377,84 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_22"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_23"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_24"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_25"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_26"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_27"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -384,63 +468,84 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_29"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_30"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_31"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_32"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_33"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_34"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -454,63 +559,84 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_36"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_37"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_38"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_39"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_40"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
 
         <TextView
             android:id="@+id/widget_cell_41"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top|center_horizontal"
             android:textColor="#FF212121"
-            android:textSize="12sp" />
+            android:textSize="9sp"
+            android:maxLines="5"
+            android:ellipsize="end"
+            android:lineSpacingExtra="0dp" />
     </LinearLayout>
 
 </LinearLayout>

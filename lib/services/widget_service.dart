@@ -39,7 +39,18 @@ class WidgetService {
       final eventDays = expanded
           .map((event) => DateUtils.dateOnly(event.startDateTime))
           .toSet();
-      final monthCellsJson = jsonEncode(buildMonthCells(today, eventDays));
+      final titlesByDay = <DateTime, List<String>>{};
+      for (final event in expanded
+          .toList()
+          ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime))) {
+        final day = DateUtils.dateOnly(event.startDateTime);
+        final label = event.icon?.isNotEmpty == true
+            ? '${event.icon}${event.title}'
+            : event.title;
+        (titlesByDay[day] ??= []).add(label);
+      }
+      final monthCellsJson = jsonEncode(
+          buildMonthCells(today, eventDays, titlesByDay: titlesByDay));
       final monthTitle = DateFormat('yyyy년 M월').format(now);
 
       final eventsJson = jsonEncode(todayEvents.map((e) {

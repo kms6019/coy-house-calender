@@ -23,8 +23,8 @@ void main() {
         {DateTime(2026, 6, 28), DateTime(2026, 8, 1)},
       );
 
-      expect(cells[0], {'d': '', 'ev': false, 'today': false});
-      expect(cells[34], {'d': '', 'ev': false, 'today': false});
+      expect(cells[0], {'d': '', 'ev': false, 'today': false, 't': <String>[]});
+      expect(cells[34], {'d': '', 'ev': false, 'today': false, 't': <String>[]});
     });
 
     test('today는 정확히 한 칸에만 표시된다', () {
@@ -48,5 +48,23 @@ void main() {
 
       expect(eventCells.map((cell) => cell['d']).toList(), ['5', '18']);
     });
+  });
+
+  test('titlesByDay가 있으면 t에 최대 3개', () {
+    final cells = buildMonthCells(
+      DateTime(2026, 7, 18),
+      {DateTime(2026, 7, 18)},
+      titlesByDay: {
+        DateTime(2026, 7, 18): ['a', 'b', 'c', 'd'],
+      },
+    );
+    final cell = cells.firstWhere((c) => c['d'] == '18');
+    expect(cell['t'], ['a', 'b', 'c']);
+  });
+
+  test('titlesByDay 없는 날은 t 빈 리스트', () {
+    final cells = buildMonthCells(DateTime(2026, 7, 18), {});
+    final cell = cells.firstWhere((c) => c['d'] == '18');
+    expect(cell['t'], isEmpty);
   });
 }
