@@ -163,10 +163,12 @@ class FirestoreService {
     return newEvent;
   }
 
-  Future<void> updateEvent(EventModel event) {
-    return _db.collection('events').doc(event.id).update(
-      event.copyWith(updatedAt: DateTime.now()).toMap(),
-    );
+  Future<void> updateEvent(EventModel event, {String? editorUid}) {
+    final map = event.copyWith(updatedAt: DateTime.now()).toMap();
+    if (editorUid != null && editorUid.isNotEmpty) {
+      map['lastEditorUid'] = editorUid;
+    }
+    return _db.collection('events').doc(event.id).update(map);
   }
 
   Future<void> deleteEvent(String eventId) {

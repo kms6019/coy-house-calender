@@ -192,7 +192,10 @@ class EventDetailScreen extends ConsumerWidget {
       repeatUntil: master.repeatUntil,
       excludedDates: {...master.excludedDates, day}.toList(),
     );
-    await ref.read(firestoreServiceProvider).updateEvent(updated);
+    await ref.read(firestoreServiceProvider).updateEvent(
+          updated,
+          editorUid: ref.read(authStateProvider).valueOrNull?.uid,
+        );
     // 다음 알림이 이 회차였을 수 있으니 재스케줄
     await NotificationService().cancelAlarm(master.id);
     if (master.hasAlarm) await NotificationService().scheduleAlarm(updated);

@@ -180,7 +180,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
               _repeat == RepeatRule.none ? const [] : widget.event!.excludedDates,
         );
         saved = saved.copyWith(color: effectiveColor).copyWithIcon(_icon);
-        await fs.updateEvent(saved);
+        await fs.updateEvent(saved, editorUid: authUid);
       }
 
       final calendarSync = SamsungCalendarSyncService();
