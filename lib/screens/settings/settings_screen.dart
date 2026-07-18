@@ -182,6 +182,15 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
 
+          // 기기 캘린더 가져오기
+          ListTile(
+            leading: const Icon(Icons.download_outlined),
+            title: const Text('기기 캘린더 가져오기'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/import'),
+          ),
+          const Divider(),
+
           // 아침 브리핑
           const _BriefingSection(),
           const Divider(),
