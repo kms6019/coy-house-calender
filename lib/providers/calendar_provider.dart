@@ -2,16 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/event_model.dart';
 import '../models/couple_model.dart';
+import '../models/korean_holiday.dart';
 import '../models/wish_model.dart';
 import '../services/firestore_service.dart';
 import '../services/briefing_prefs.dart';
+import '../services/holiday_prefs.dart';
+import '../services/korean_holiday_service.dart';
 import '../services/notification_service.dart';
 import '../services/samsung_calendar_sync_service.dart';
 import '../services/widget_service.dart';
 import 'auth_provider.dart';
 
-final firestoreServiceProvider =
-    Provider<FirestoreService>((ref) => FirestoreService());
+final firestoreServiceProvider = Provider<FirestoreService>(
+  (ref) => FirestoreService(),
+);
+
+final koreanHolidayServiceProvider = Provider<KoreanHolidayService>(
+  (ref) => KoreanHolidayService.instance,
+);
+
+final holidayDisplayEnabledProvider = FutureProvider<bool>((ref) {
+  return HolidayPrefs.loadEnabled();
+});
+
+final koreanHolidaysProvider = FutureProvider.family<List<KoreanHoliday>, int>((
+  ref,
+  year,
+) async {
+  final enabled = await ref.watch(holidayDisplayEnabledProvider.future);
+  if (!enabled) return const <KoreanHoliday>[];
+  return ref.watch(koreanHolidayServiceProvider).getHolidaysForYear(year);
+});
 
 final coupleStreamProvider = StreamProvider<CoupleModel?>((ref) {
   final userAsync = ref.watch(currentUserModelProvider);
@@ -39,8 +60,10 @@ final widgetSyncProvider = Provider<void>((ref) {
   final events = ref.watch(eventsStreamProvider).valueOrNull;
   final couple = ref.watch(coupleStreamProvider).valueOrNull;
   if (events != null) {
-    WidgetService.update(events,
-        anniversaries: couple?.anniversaries ?? const []);
+    WidgetService.update(
+      events,
+      anniversaries: couple?.anniversaries ?? const [],
+    );
   }
 });
 
@@ -77,6 +100,10 @@ final deviceCalendarSyncProvider = Provider<void>((ref) {
 });
 
 // 선택된 날짜
-final selectedDateProvider = StateProvider<DateTime>((ref) => DateUtils.dateOnly(DateTime.now()));
+final selectedDateProvider = StateProvider<DateTime>(
+  (ref) => DateUtils.dateOnly(DateTime.now()),
+);
 
-final focusedDateProvider = StateProvider<DateTime>((ref) => DateUtils.dateOnly(DateTime.now()));
+final focusedDateProvider = StateProvider<DateTime>(
+  (ref) => DateUtils.dateOnly(DateTime.now()),
+);

@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.widget.RemoteViews
@@ -96,6 +97,8 @@ class CalendarMonthWidgetProvider : AppWidgetProvider() {
                     val obj = arr.optJSONObject(i) ?: continue
                     val cellId = cellIds[i]
                     val day = obj.optString("d", "")
+                    val isToday = obj.optBoolean("today", false)
+                    val isHoliday = obj.optBoolean("holiday", false)
 
                     views.setTextColor(cellId, Color.parseColor("#212121"))
                     views.setInt(cellId, "setBackgroundColor", Color.TRANSPARENT)
@@ -112,24 +115,68 @@ class CalendarMonthWidgetProvider : AppWidgetProvider() {
                         0, day.length,
                         Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                     )
-                    val titles = obj.optJSONArray("t")
-                    if (titles != null) {
-                        for (t in 0 until titles.length()) {
-                            val start = text.length
-                            text.append("\n").append(titles.optString(t, ""))
+                    if (!isToday) {
+                        val dayColor = when {
+                            isHoliday || i % 7 == 0 -> Color.parseColor("#E53935")
+                            i % 7 == 6 -> Color.parseColor("#1E88E5")
+                            else -> Color.parseColor("#212121")
+                        }
+                        text.setSpan(
+                            ForegroundColorSpan(dayColor),
+                            0, day.length,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                    }
+
+                    val holidayName = obj.optString("h", "")
+                    if (holidayName.isNotEmpty()) {
+                        text.append("\n")
+                        val start = text.length
+                        text.append(holidayName)
+                        text.setSpan(
+                            RelativeSizeSpan(0.8f),
+                            start, text.length,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                        text.setSpan(
+                            StyleSpan(Typeface.BOLD),
+                            start, text.length,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                        if (!isToday) {
                             text.setSpan(
-                                RelativeSizeSpan(0.85f),
+                                ForegroundColorSpan(Color.parseColor("#E53935")),
                                 start, text.length,
                                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                             )
                         }
                     }
+
+                    val titles = obj.optJSONArray("t")
+                    if (titles != null) {
+                        for (t in 0 until titles.length()) {
+                            val title = titles.optString(t, "")
+                            if (title.isEmpty()) continue
+                            text.append("\n")
+                            val start = text.length
+                            text.append(title)
+                            text.setSpan(
+                                RelativeSizeSpan(0.85f),
+                                start, text.length,
+                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                            )
+                            if (!isToday) {
+                                text.setSpan(
+                                    ForegroundColorSpan(Color.parseColor("#D81B60")),
+                                    start, text.length,
+                                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
+                            }
+                        }
+                    }
                     views.setTextViewText(cellId, text)
 
-                    if (obj.optBoolean("ev", false)) {
-                        views.setTextColor(cellId, Color.parseColor("#D81B60"))
-                    }
-                    if (obj.optBoolean("today", false)) {
+                    if (isToday) {
                         views.setInt(
                             cellId,
                             "setBackgroundColor",

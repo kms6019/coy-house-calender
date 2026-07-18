@@ -1,15 +1,15 @@
-# AGENTS.md — Codex 오케스트레이션 인수인계 (2026-07-18)
+# AGENTS.md — Codex 오케스트레이션 인수인계 (2026-07-19)
 
 Claude Code에서 Codex로 오케스트레이션 이관. **CLAUDE.md를 먼저 읽을 것** (아키텍처·명령어·Known Issues 전부 거기 있음). 이 문서는 이관 시점 상태 + 운영 절차.
 
-## 현재 상태 (2026-07-18 저녁 기준)
+## 현재 상태 (2026-07-19 기준)
 
-- 브랜치: master, 전부 push됨. 테스트 **107/107**, `flutter analyze`는 기존 info 2건뿐 (event_detail use_build_context_synchronously — 무시 중)
+- 브랜치: master, 전부 push됨. 테스트 **113/113**, `flutter analyze`는 기존 info 2건뿐 (event_detail use_build_context_synchronously — 무시 중)
 - 백로그(옵시디언 `C:/Users/PUP99/Documents/HousePC/1. Projects/CoyHouseCalender/04. 기능 아이디어 백로그.md`) **전 항목 완료**
 - Firebase **Blaze 전환 완료** (예산 알림 설정 안내됨). 과금 가드: functions maxInstances 2 / 256MiB / 이미지 정리 1일 / 함수는 Firestore 쓰기 없음
 - 배포된 서버 리소스: Cloud Functions `onEventCreated`/`onEventUpdated` (asia-northeast3), firestore.rules, storage.rules (버킷 생성됨)
 
-## 오늘 구현된 기능 (전부 커밋·배포 완료)
+## 구현된 주요 기능 (전부 커밋·배포 완료)
 
 | 기능 | 핵심 파일 |
 |---|---|
@@ -21,15 +21,22 @@ Claude Code에서 Codex로 오케스트레이션 이관. **CLAUDE.md를 먼저 �
 | 월 스와이프 애니메이션 + 기념일 🎉 표시 | calendar_screen `_MonthPager`(PageView), `anniversaryEventsForMonth` (dday_utils) |
 | 삼성캘린더 미러 동기화 (상대 일정 포함) | `SamsungCalendarSyncService.syncAll`, `deviceCalendarSyncProvider` |
 | 푸시 수신 백그라운드 동기화 | functions data `{type: 'event_sync'}` → main.dart `_firebaseMessagingBackgroundHandler` |
+| 대한민국 공휴일 표시 | `KoreanHolidayService` (공개 ICS + 7일 캐시), `MonthGrid`, 월간 위젯, 설정 토글 |
 
-## 미검증 — 실기기 확인 대기 (최우선)
+## 실기기 검증
 
-두 폰(남편/와이프) 모두 최신 APK 설치 후:
+기존 5항목은 두 폰에서 2026-07-18 검증 완료:
 1. 푸시 3종 (등록/제안/수락) 수신
 2. 월간 위젯 5×6 렌더링 (기존 위젯 제거 후 재추가 필요)
 3. 사진 후기 업로드/표시
 4. 백그라운드 동기화 (앱 닫고 상대가 일정 등록 → 삼성캘린더 반영)
 5. 기기 캘린더 가져오기 (설정 → 기기 캘린더 가져오기)
+
+신규 공휴일 기능만 실기기 최종 확인 대기:
+1. 2026년 7월 17일 `제헌절`, 8월 15일 `광복절` 이름/빨간 날짜 표시
+2. 날짜 상세에 `대한민국 공휴일` 행 표시
+3. 설정 토글 OFF/ON 시 앱 달력과 월간 위젯에서 함께 숨김/표시
+4. 위젯은 기존 위젯을 제거 후 재추가해야 레이아웃 변경을 확실히 확인 가능
 
 문제 발생 시: `firebase functions:log --project coy-house-calender`, adb logcat.
 
@@ -55,6 +62,8 @@ Claude Code에서 Codex로 오케스트레이션 이관. **CLAUDE.md를 먼저 �
 ## 함정 (CLAUDE.md Known Issues 외 추가분)
 
 - functions 푸시: onUpdate는 `MEANINGFUL_FIELDS` 변경 시만 발송. 후기(reviewText) 저장은 의도적으로 푸시 안 보냄. proposed→confirmed 전이는 필드 변경 없어도 "수락" 푸시
+- 공휴일은 `EventModel`/Firestore에 넣지 않는 별도 오버레이. 푸시·검색·리포트·삼성캘린더 미러 대상에 섞지 말 것
+- 공휴일 원격 소스는 Google 공개 대한민국 공휴일 ICS의 `DESCRIPTION:공휴일`만 사용, SharedPreferences 7일 캐시. `KASI_SERVICE_KEY`는 아직 없음
 - `EventModel.copyWith`는 null 병합 — icon/repeat 해제는 `copyWithIcon`/`copyWithRepeat` 사용
 - `deviceCalendarSyncProvider`: coupleId 빈 값이면 스킵 (로그아웃 시 기기 캘린더 전체 삭제 방지 가드 — 제거 금지)
 - 반복 일정은 판정식이 아니라 **범위 전개** (`expandRecurringForRange`) — occurrence 복사본 id는 마스터와 동일
@@ -64,7 +73,7 @@ Claude Code에서 Codex로 오케스트레이션 이관. **CLAUDE.md를 먼저 �
 
 ## 다음 후보 (사용자와 논의)
 
-- 실기기 검증에서 나온 버그 수정 (최우선)
+- 공휴일 실기기 검증에서 나온 버그 수정 (최우선)
 - 반복 일정 v2: 이 회차만 수정, 격주, 삼성캘린더 EXDATE
 - 후기 모아보기(추억 앨범) 화면, 위젯 탭 → 앱 실행 인텐트
 - 별도 테스트 계정 만들어 E2E와 실데이터 분리

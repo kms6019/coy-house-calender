@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/event_model.dart';
+import '../../models/korean_holiday.dart';
 import '../../providers/calendar_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/dday_utils.dart';
@@ -34,7 +35,11 @@ class CalendarScreen extends ConsumerWidget {
 
     void goToToday() {
       final today = DateUtils.dateOnly(DateTime.now());
-      ref.read(focusedDateProvider.notifier).state = DateTime(today.year, today.month, 1);
+      ref.read(focusedDateProvider.notifier).state = DateTime(
+        today.year,
+        today.month,
+        1,
+      );
       ref.read(selectedDateProvider.notifier).state = today;
     }
 
@@ -64,7 +69,9 @@ class CalendarScreen extends ConsumerWidget {
                           data: (couple) => Padding(
                             padding: const EdgeInsets.only(left: 8),
                             child: Icon(
-                              couple?.isLinked == true ? Icons.favorite : Icons.favorite_border,
+                              couple?.isLinked == true
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
                               color: Colors.white,
                               size: 18,
                             ),
@@ -74,7 +81,10 @@ class CalendarScreen extends ConsumerWidget {
                         ),
                         const Spacer(),
                         IconButton(
-                          icon: const Icon(Icons.chevron_left, color: Colors.white),
+                          icon: const Icon(
+                            Icons.chevron_left,
+                            color: Colors.white,
+                          ),
                           onPressed: () => changeMonth(-1),
                         ),
                         GestureDetector(
@@ -89,7 +99,10 @@ class CalendarScreen extends ConsumerWidget {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.chevron_right, color: Colors.white),
+                          icon: const Icon(
+                            Icons.chevron_right,
+                            color: Colors.white,
+                          ),
                           onPressed: () => changeMonth(1),
                         ),
                         const Spacer(),
@@ -101,7 +114,9 @@ class CalendarScreen extends ConsumerWidget {
                               height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(Colors.white),
+                                valueColor: AlwaysStoppedAnimation(
+                                  Colors.white,
+                                ),
                               ),
                             ),
                           ),
@@ -110,16 +125,26 @@ class CalendarScreen extends ConsumerWidget {
                           onPressed: () => context.push('/search'),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.checklist, color: Colors.white),
+                          icon: const Icon(
+                            Icons.checklist,
+                            color: Colors.white,
+                          ),
                           onPressed: () => context.push('/wishlist'),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.settings_outlined, color: Colors.white),
+                          icon: const Icon(
+                            Icons.settings_outlined,
+                            color: Colors.white,
+                          ),
                           onPressed: () => context.push('/settings'),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.add_circle_outline, color: Colors.white),
-                          onPressed: () => context.push('/event/new', extra: selectedDay),
+                          icon: const Icon(
+                            Icons.add_circle_outline,
+                            color: Colors.white,
+                          ),
+                          onPressed: () =>
+                              context.push('/event/new', extra: selectedDay),
                         ),
                       ],
                     ),
@@ -130,7 +155,8 @@ class CalendarScreen extends ConsumerWidget {
                         : Padding(
                             padding: const EdgeInsets.only(bottom: 6),
                             child: AnniversaryChips(
-                                anniversaries: couple.anniversaries),
+                              anniversaries: couple.anniversaries,
+                            ),
                           ),
                     orElse: () => const SizedBox.shrink(),
                   ),
@@ -139,8 +165,8 @@ class CalendarScreen extends ConsumerWidget {
                       final color = i == 0
                           ? Colors.red[100]
                           : i == 6
-                              ? Colors.blue[100]
-                              : Colors.white;
+                          ? Colors.blue[100]
+                          : Colors.white;
                       return Expanded(
                         child: Padding(
                           padding: const EdgeInsets.only(bottom: 6),
@@ -166,11 +192,16 @@ class CalendarScreen extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                          const Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(height: 8),
                           const Text('일정을 불러오지 못했습니다.'),
                           TextButton(
-                            onPressed: () => ref.invalidate(eventsStreamProvider),
+                            onPressed: () =>
+                                ref.invalidate(eventsStreamProvider),
                             child: const Text('다시 시도'),
                           ),
                         ],
@@ -214,8 +245,9 @@ class _MonthPagerState extends ConsumerState<_MonthPager> {
   @override
   void initState() {
     super.initState();
-    _controller =
-        PageController(initialPage: _indexOf(ref.read(focusedDateProvider)));
+    _controller = PageController(
+      initialPage: _indexOf(ref.read(focusedDateProvider)),
+    );
   }
 
   @override
@@ -243,8 +275,7 @@ class _MonthPagerState extends ConsumerState<_MonthPager> {
     final selectedDay = ref.watch(selectedDateProvider);
     final events = ref.watch(eventsStreamProvider).valueOrNull ?? [];
     final anniversaries =
-        ref.watch(coupleStreamProvider).valueOrNull?.anniversaries ??
-            const [];
+        ref.watch(coupleStreamProvider).valueOrNull?.anniversaries ?? const [];
 
     return PageView.builder(
       controller: _controller,
@@ -260,14 +291,19 @@ class _MonthPagerState extends ConsumerState<_MonthPager> {
         final month = _monthAt(index);
         final monthEnd = DateTime(month.year, month.month + 1, 0);
         final expanded = expandRecurringForRange(events, month, monthEnd);
-        return MonthGrid(
-          month: month,
-          events: [
-            ...expanded,
-            ...anniversaryEventsForMonth(anniversaries, month),
-          ],
-          selectedDay: selectedDay,
-          onDayTap: widget.onDayTap,
+        return Consumer(
+          builder: (context, ref, _) => MonthGrid(
+            month: month,
+            events: [
+              ...expanded,
+              ...anniversaryEventsForMonth(anniversaries, month),
+            ],
+            holidays:
+                ref.watch(koreanHolidaysProvider(month.year)).valueOrNull ??
+                const <KoreanHoliday>[],
+            selectedDay: selectedDay,
+            onDayTap: widget.onDayTap,
+          ),
         );
       },
     );
@@ -281,8 +317,16 @@ class _DaySheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final allEvents = ref.watch(eventsStreamProvider).valueOrNull ?? <EventModel>[];
+    final allEvents =
+        ref.watch(eventsStreamProvider).valueOrNull ?? <EventModel>[];
     final events = eventsForDay(allEvents, day);
+    final holidays =
+        ref.watch(koreanHolidaysProvider(day.year)).valueOrNull ??
+        const <KoreanHoliday>[];
+    final holidayName = koreanHolidayNameForDate(
+      groupKoreanHolidaysByDate(holidays),
+      day,
+    );
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.only(top: 12),
@@ -296,8 +340,8 @@ class _DaySheet extends ConsumerWidget {
                   Text(
                     DateFormat('M월 d일 (E)', 'ko_KR').format(day),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
@@ -311,10 +355,26 @@ class _DaySheet extends ConsumerWidget {
               ),
             ),
             const Divider(height: 1),
+            if (holidayName != null)
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.flag_outlined, color: Colors.red),
+                title: Text(
+                  holidayName,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text('대한민국 공휴일'),
+              ),
             if (events.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32),
-                child: Text('일정이 없습니다', style: TextStyle(color: Colors.grey[400])),
+                child: Text(
+                  '일정이 없습니다',
+                  style: TextStyle(color: Colors.grey[400]),
+                ),
               )
             else
               Flexible(

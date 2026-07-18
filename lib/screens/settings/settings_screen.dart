@@ -6,7 +6,9 @@ import '../../models/couple_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../services/briefing_prefs.dart';
+import '../../services/holiday_prefs.dart';
 import '../../services/notification_service.dart';
+import '../../services/widget_service.dart';
 import '../../theme/couple_palette.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -36,8 +38,10 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              title: Text(user?.displayName ?? '-',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(
+                user?.displayName ?? '-',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               subtitle: Text(user?.email ?? '-'),
             ),
             loading: () => const ListTile(
@@ -53,7 +57,10 @@ class SettingsScreen extends ConsumerWidget {
             data: (couple) {
               if (couple == null) {
                 return ListTile(
-                  leading: const Icon(Icons.favorite_border, color: Colors.grey),
+                  leading: const Icon(
+                    Icons.favorite_border,
+                    color: Colors.grey,
+                  ),
                   title: const Text('파트너 연결'),
                   subtitle: const Text('아직 파트너와 연결되지 않았습니다'),
                   trailing: TextButton(
@@ -68,17 +75,21 @@ class SettingsScreen extends ConsumerWidget {
                 return Column(
                   children: [
                     ListTile(
-                      leading:
-                          const Icon(Icons.favorite_border, color: Colors.grey),
+                      leading: const Icon(
+                        Icons.favorite_border,
+                        color: Colors.grey,
+                      ),
                       title: const Text('파트너 연결 대기 중'),
                       subtitle: Text(
-                          '초대 코드: ${couple.inviteCode}\n파트너가 이 코드를 입력하면 연결됩니다'),
+                        '초대 코드: ${couple.inviteCode}\n파트너가 이 코드를 입력하면 연결됩니다',
+                      ),
                       isThreeLine: true,
                       trailing: IconButton(
                         icon: const Icon(Icons.copy, size: 20),
                         onPressed: () {
                           Clipboard.setData(
-                              ClipboardData(text: couple.inviteCode));
+                            ClipboardData(text: couple.inviteCode),
+                          );
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('코드가 복사되었습니다')),
                           );
@@ -124,15 +135,20 @@ class SettingsScreen extends ConsumerWidget {
                                   : couple.partnerColorValue,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.edit,
-                                size: 12, color: Colors.white70),
+                            child: const Icon(
+                              Icons.edit,
+                              size: 12,
+                              color: Colors.white70,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           isOwner ? '방장' : '파트너',
                           style: const TextStyle(
-                              fontSize: 12, color: Colors.grey),
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
                         ),
                       ],
                     ),
@@ -140,16 +156,28 @@ class SettingsScreen extends ConsumerWidget {
                   // 초대 코드 표시 (방장만)
                   if (isOwner && !couple.isLinked == false)
                     Padding(
-                      padding: const EdgeInsets.only(left: 72, right: 16, bottom: 8),
+                      padding: const EdgeInsets.only(
+                        left: 72,
+                        right: 16,
+                        bottom: 8,
+                      ),
                       child: Row(
                         children: [
-                          Text('초대 코드: ',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey[600])),
-                          Text(couple.inviteCode,
-                              style: const TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.bold,
-                                  letterSpacing: 2)),
+                          Text(
+                            '초대 코드: ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          Text(
+                            couple.inviteCode,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -189,6 +217,10 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/import'),
           ),
+          const Divider(),
+
+          // 대한민국 공휴일
+          const _HolidaySection(),
           const Divider(),
 
           // 아침 브리핑
@@ -232,7 +264,9 @@ class SettingsScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, codeCtrl.text.trim()),
             child: const Text('연결'),
@@ -243,9 +277,9 @@ class SettingsScreen extends ConsumerWidget {
     codeCtrl.dispose();
     if (code == null || code.length != 6) {
       if (code != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('6자리 코드를 입력하세요')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('6자리 코드를 입력하세요')));
       }
       return;
     }
@@ -253,20 +287,20 @@ class SettingsScreen extends ConsumerWidget {
     final uid = ref.read(authStateProvider).valueOrNull?.uid;
     if (uid == null) return;
     try {
-      final joined =
-          await ref.read(firestoreServiceProvider).joinByInviteCode(code, uid);
+      final joined = await ref
+          .read(firestoreServiceProvider)
+          .joinByInviteCode(code, uid);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(joined != null
-                ? '파트너와 연결되었습니다!'
-                : '유효하지 않은 코드입니다')),
+          content: Text(joined != null ? '파트너와 연결되었습니다!' : '유효하지 않은 코드입니다'),
+        ),
       );
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('연결에 실패했습니다')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('연결에 실패했습니다')));
       }
     }
   }
@@ -279,11 +313,13 @@ class SettingsScreen extends ConsumerWidget {
         content: const Text('로그아웃 하시겠습니까?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('취소')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('로그아웃')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('로그아웃'),
+          ),
         ],
       ),
     );
@@ -294,8 +330,12 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _pickMyColor(BuildContext context, WidgetRef ref,
-      CoupleModel couple, String myUid) async {
+  Future<void> _pickMyColor(
+    BuildContext context,
+    WidgetRef ref,
+    CoupleModel couple,
+    String myUid,
+  ) async {
     final isOwner = couple.ownerUid == myUid;
     final myColor = isOwner ? couple.ownerColor : couple.partnerColor;
     final partnerColor = isOwner ? couple.partnerColor : couple.ownerColor;
@@ -325,10 +365,12 @@ class SettingsScreen extends ConsumerWidget {
                       shape: BoxShape.circle,
                     ),
                     child: isMine
-                        ? Icon(Icons.check,
+                        ? Icon(
+                            Icons.check,
                             color: Color(c).computeLuminance() > 0.5
                                 ? Colors.black54
-                                : Colors.white)
+                                : Colors.white,
+                          )
                         : null,
                   ),
                 ),
@@ -338,7 +380,9 @@ class SettingsScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
         ],
       ),
     );
@@ -351,11 +395,49 @@ class SettingsScreen extends ConsumerWidget {
     } catch (e) {
       debugPrint('[Settings] updateMyColor error: $e');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('색상 변경에 실패했습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('색상 변경에 실패했습니다.')));
       }
     }
+  }
+}
+
+class _HolidaySection extends ConsumerWidget {
+  const _HolidaySection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabledAsync = ref.watch(holidayDisplayEnabledProvider);
+    return enabledAsync.when(
+      data: (enabled) => SwitchListTile(
+        secondary: const Icon(Icons.flag_outlined),
+        title: const Text('대한민국 공휴일 표시'),
+        subtitle: const Text('법정·대체·임시공휴일과 선거일을 달력에 표시'),
+        value: enabled,
+        onChanged: (value) async {
+          await HolidayPrefs.saveEnabled(value);
+          ref.invalidate(holidayDisplayEnabledProvider);
+          ref.invalidate(koreanHolidaysProvider);
+
+          final events = ref.read(eventsStreamProvider).valueOrNull ?? [];
+          final anniversaries =
+              ref.read(coupleStreamProvider).valueOrNull?.anniversaries ??
+              const [];
+          await WidgetService.update(events, anniversaries: anniversaries);
+        },
+      ),
+      loading: () => const ListTile(
+        leading: Icon(Icons.flag_outlined),
+        title: Text('대한민국 공휴일 표시'),
+        trailing: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
+    );
   }
 }
 
@@ -382,7 +464,9 @@ class _BriefingSectionState extends ConsumerState<_BriefingSection> {
     final m = minute ?? _prefs?.minute ?? 0;
     await BriefingPrefs.save(enabled: enabled, hour: h, minute: m);
     if (!mounted) return;
-    setState(() => _prefs = BriefingPrefs(enabled: enabled, hour: h, minute: m));
+    setState(
+      () => _prefs = BriefingPrefs(enabled: enabled, hour: h, minute: m),
+    );
     final events = ref.read(eventsStreamProvider).valueOrNull ?? [];
     await NotificationService().scheduleBriefings(
       events: events,
@@ -416,12 +500,10 @@ class _BriefingSectionState extends ConsumerState<_BriefingSection> {
             onTap: () async {
               final picked = await showTimePicker(
                 context: context,
-                initialTime:
-                    TimeOfDay(hour: prefs.hour, minute: prefs.minute),
+                initialTime: TimeOfDay(hour: prefs.hour, minute: prefs.minute),
               );
               if (picked != null) {
-                _apply(
-                    enabled: true, hour: picked.hour, minute: picked.minute);
+                _apply(enabled: true, hour: picked.hour, minute: picked.minute);
               }
             },
           ),

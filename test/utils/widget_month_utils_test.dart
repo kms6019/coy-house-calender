@@ -18,13 +18,27 @@ void main() {
     });
 
     test('이웃 달 칸은 비어 있고 플래그가 false다', () {
-      final cells = buildMonthCells(
-        today,
-        {DateTime(2026, 6, 28), DateTime(2026, 8, 1)},
-      );
+      final cells = buildMonthCells(today, {
+        DateTime(2026, 6, 28),
+        DateTime(2026, 8, 1),
+      });
 
-      expect(cells[0], {'d': '', 'ev': false, 'today': false, 't': <String>[]});
-      expect(cells[34], {'d': '', 'ev': false, 'today': false, 't': <String>[]});
+      expect(cells[0], {
+        'd': '',
+        'ev': false,
+        'today': false,
+        'holiday': false,
+        'h': '',
+        't': <String>[],
+      });
+      expect(cells[34], {
+        'd': '',
+        'ev': false,
+        'today': false,
+        'holiday': false,
+        'h': '',
+        't': <String>[],
+      });
     });
 
     test('today는 정확히 한 칸에만 표시된다', () {
@@ -36,14 +50,11 @@ void main() {
     });
 
     test('eventDays에 포함된 현재 달 날짜만 ev가 true다', () {
-      final cells = buildMonthCells(
-        today,
-        {
-          DateTime(2026, 6, 28),
-          DateTime(2026, 7, 5),
-          DateTime(2026, 7, 18),
-        },
-      );
+      final cells = buildMonthCells(today, {
+        DateTime(2026, 6, 28),
+        DateTime(2026, 7, 5),
+        DateTime(2026, 7, 18),
+      });
       final eventCells = cells.where((cell) => cell['ev'] == true).toList();
 
       expect(eventCells.map((cell) => cell['d']).toList(), ['5', '18']);
@@ -66,5 +77,20 @@ void main() {
     final cells = buildMonthCells(DateTime(2026, 7, 18), {});
     final cell = cells.firstWhere((c) => c['d'] == '18');
     expect(cell['t'], isEmpty);
+  });
+
+  test('holidayNamesByDay가 있으면 공휴일 플래그와 이름을 넣는다', () {
+    final cells = buildMonthCells(
+      DateTime(2026, 7, 18),
+      {},
+      holidayNamesByDay: {DateTime(2026, 7, 17): '제헌절'},
+    );
+
+    final holidayCell = cells.firstWhere((cell) => cell['d'] == '17');
+    final normalCell = cells.firstWhere((cell) => cell['d'] == '16');
+    expect(holidayCell['holiday'], isTrue);
+    expect(holidayCell['h'], '제헌절');
+    expect(normalCell['holiday'], isFalse);
+    expect(normalCell['h'], isEmpty);
   });
 }
