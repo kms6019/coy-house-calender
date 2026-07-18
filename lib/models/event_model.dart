@@ -9,6 +9,8 @@ class EventModel {
   final String createdByUid;
   final String title;
   final String? description;
+  final String? reviewText;
+  final String? reviewPhotoUrl;
   final DateTime startDateTime;
   final DateTime? endDateTime;
   final bool isAllDay;
@@ -30,6 +32,8 @@ class EventModel {
     required this.createdByUid,
     required this.title,
     this.description,
+    this.reviewText,
+    this.reviewPhotoUrl,
     required this.startDateTime,
     this.endDateTime,
     required this.isAllDay,
@@ -56,6 +60,8 @@ class EventModel {
       createdByUid: map['createdByUid'] as String,
       title: map['title'] as String,
       description: map['description'] as String?,
+      reviewText: map['reviewText'] as String?,
+      reviewPhotoUrl: map['reviewPhotoUrl'] as String?,
       startDateTime: (map['startDateTime'] as Timestamp).toDate(),
       endDateTime: map['endDateTime'] != null
           ? (map['endDateTime'] as Timestamp).toDate()
@@ -89,6 +95,8 @@ class EventModel {
       'createdByUid': createdByUid,
       'title': title,
       'description': description,
+      'reviewText': reviewText,
+      'reviewPhotoUrl': reviewPhotoUrl,
       'startDateTime': Timestamp.fromDate(startDateTime),
       'endDateTime': endDateTime != null ? Timestamp.fromDate(endDateTime!) : null,
       'isAllDay': isAllDay,
@@ -110,6 +118,8 @@ class EventModel {
   EventModel copyWith({
     String? title,
     String? description,
+    String? reviewText,
+    String? reviewPhotoUrl,
     DateTime? startDateTime,
     DateTime? endDateTime,
     bool? isAllDay,
@@ -126,6 +136,8 @@ class EventModel {
       createdByUid: createdByUid,
       title: title ?? this.title,
       description: description ?? this.description,
+      reviewText: reviewText ?? this.reviewText,
+      reviewPhotoUrl: reviewPhotoUrl ?? this.reviewPhotoUrl,
       startDateTime: startDateTime ?? this.startDateTime,
       endDateTime: endDateTime ?? this.endDateTime,
       isAllDay: isAllDay ?? this.isAllDay,
@@ -151,6 +163,8 @@ class EventModel {
       createdByUid: createdByUid,
       title: title,
       description: description,
+      reviewText: reviewText,
+      reviewPhotoUrl: reviewPhotoUrl,
       startDateTime: startDateTime,
       endDateTime: endDateTime,
       isAllDay: isAllDay,
@@ -180,6 +194,8 @@ class EventModel {
       createdByUid: createdByUid,
       title: title,
       description: description,
+      reviewText: reviewText,
+      reviewPhotoUrl: reviewPhotoUrl,
       startDateTime: startDateTime,
       endDateTime: endDateTime,
       isAllDay: isAllDay,

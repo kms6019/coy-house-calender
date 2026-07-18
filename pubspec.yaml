@@ -40,6 +40,8 @@ dependencies:
   # 홈 위젯
   home_widget: ^0.6.0
   device_calendar: ^4.3.3
+  firebase_storage: ^12.4.10
+  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_test:

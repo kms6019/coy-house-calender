@@ -151,4 +151,48 @@ void main() {
       expect(e.copyWithIcon('⭐').title, e.title);
     });
   });
+
+  group('후기 필드', () {
+    test('필드 없는 구 문서는 null', () {
+      final e = EventModel.fromMap(_baseMap());
+      expect(e.reviewText, isNull);
+      expect(e.reviewPhotoUrl, isNull);
+    });
+
+    test('직렬화 왕복', () {
+      final e = EventModel.fromMap(_baseMap()
+        ..['reviewText'] = '함께여서 즐거웠다'
+        ..['reviewPhotoUrl'] = 'https://example.com/review.jpg');
+      final out = e.toMap();
+
+      expect(out['reviewText'], '함께여서 즐거웠다');
+      expect(out['reviewPhotoUrl'], 'https://example.com/review.jpg');
+      expect(EventModel.fromMap(out).reviewText, '함께여서 즐거웠다');
+      expect(
+        EventModel.fromMap(out).reviewPhotoUrl,
+        'https://example.com/review.jpg',
+      );
+    });
+
+    test('copyWith로 반영', () {
+      final e = EventModel.fromMap(_baseMap());
+      final copied = e.copyWith(
+        reviewText: '좋은 하루',
+        reviewPhotoUrl: 'https://example.com/photo.jpg',
+      );
+
+      expect(copied.reviewText, '좋은 하루');
+      expect(copied.reviewPhotoUrl, 'https://example.com/photo.jpg');
+    });
+
+    test('copyWith 미지정 시 보존', () {
+      final e = EventModel.fromMap(_baseMap()
+        ..['reviewText'] = '기억할 하루'
+        ..['reviewPhotoUrl'] = 'https://example.com/kept.jpg');
+      final copied = e.copyWith(title: '수정된 제목');
+
+      expect(copied.reviewText, '기억할 하루');
+      expect(copied.reviewPhotoUrl, 'https://example.com/kept.jpg');
+    });
+  });
 }

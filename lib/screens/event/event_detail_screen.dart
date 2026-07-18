@@ -1,6 +1,11 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../models/event_model.dart';
 import '../../providers/auth_provider.dart';
@@ -135,6 +140,54 @@ class EventDetailScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             Text(event.description!),
           ],
+          if (master.reviewText == null && master.reviewPhotoUrl == null) ...[
+            const SizedBox(height: 24),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () =>
+                    _showReviewDialog(context, ref, master, currentUid),
+                icon: const Icon(Icons.rate_review_outlined),
+                label: const Text('후기 남기기'),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            Text(
+              '후기',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.grey),
+            ),
+            if (master.reviewPhotoUrl != null) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  master.reviewPhotoUrl!,
+                  height: 220,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              ),
+            ],
+            if (master.reviewText != null) ...[
+              const SizedBox(height: 12),
+              Text(master.reviewText!),
+            ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () =>
+                    _showReviewDialog(context, ref, master, currentUid),
+                child: const Text('후기 수정'),
+              ),
+            ),
+          ],
           if (master.isProposed &&
               currentUid != null &&
               master.createdByUid != currentUid) ...[
@@ -181,6 +234,127 @@ class EventDetailScreen extends ConsumerWidget {
     final base = '${labels[master.repeat]} 반복';
     if (master.repeatUntil == null) return base;
     return '$base · ${DateFormat('yyyy.MM.dd').format(master.repeatUntil!)}까지';
+  }
+
+  Future<void> _showReviewDialog(
+    BuildContext context,
+    WidgetRef ref,
+    EventModel master,
+    String? currentUid,
+  ) async {
+    final reviewController = TextEditingController(text: master.reviewText ?? '');
+    XFile? pickedPhoto;
+    var isSaving = false;
+
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => PopScope(
+            canPop: !isSaving,
+            child: AlertDialog(
+              title: Text(
+                master.reviewText == null && master.reviewPhotoUrl == null
+                    ? '후기 남기기'
+                    : '후기 수정',
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: reviewController,
+                    decoration: const InputDecoration(hintText: '한줄 후기'),
+                  ),
+                  if (!kIsWeb) ...[
+                    const SizedBox(height: 16),
+                    OutlinedButton(
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              final picked = await ImagePicker().pickImage(
+                                source: ImageSource.gallery,
+                                maxWidth: 1280,
+                                imageQuality: 80,
+                              );
+                              if (picked != null && dialogContext.mounted) {
+                                setDialogState(() => pickedPhoto = picked);
+                              }
+                            },
+                      child: const Text('사진 선택'),
+                    ),
+                    if (pickedPhoto != null) ...[
+                      const SizedBox(height: 8),
+                      Text(pickedPhoto!.name),
+                    ],
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.pop(dialogContext),
+                  child: const Text('취소'),
+                ),
+                FilledButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          setDialogState(() => isSaving = true);
+                          final trimmedText = reviewController.text.trim();
+
+                          try {
+                            var photoUrl = master.reviewPhotoUrl;
+                            if (!kIsWeb && pickedPhoto != null) {
+                              final storageRef = FirebaseStorage.instance
+                                  .ref('reviews/${master.id}.jpg');
+                              await storageRef.putFile(File(pickedPhoto!.path));
+                              photoUrl = await storageRef.getDownloadURL();
+                            }
+
+                            await ref.read(firestoreServiceProvider).updateEvent(
+                                  master.copyWith(
+                                    reviewText:
+                                        trimmedText.isEmpty ? null : trimmedText,
+                                    reviewPhotoUrl: photoUrl,
+                                    updatedAt: DateTime.now(),
+                                  ),
+                                  editorUid: currentUid,
+                                );
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
+                          } catch (_) {
+                            if (dialogContext.mounted) {
+                              setDialogState(() => isSaving = false);
+                            }
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('후기 저장에 실패했습니다'),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('저장'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } finally {
+      reviewController.dispose();
+    }
   }
 
   Future<void> _confirmDelete(
