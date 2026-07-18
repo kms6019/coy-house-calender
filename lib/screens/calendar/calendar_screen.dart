@@ -178,11 +178,18 @@ class CalendarScreen extends ConsumerWidget {
                         ],
                       ),
                     )
-                  : MonthGrid(
-                      month: focusedDay,
-                      events: expandedEvents,
-                      selectedDay: selectedDay,
-                      onDayTap: openDay,
+                  : GestureDetector(
+                      onHorizontalDragEnd: (details) {
+                        final velocity = details.primaryVelocity ?? 0;
+                        if (velocity < -200) changeMonth(1); // 왼쪽으로 밀기 → 다음 달
+                        if (velocity > 200) changeMonth(-1); // 오른쪽으로 밀기 → 이전 달
+                      },
+                      child: MonthGrid(
+                        month: focusedDay,
+                        events: expandedEvents,
+                        selectedDay: selectedDay,
+                        onDayTap: openDay,
+                      ),
                     ),
             ),
           ],
