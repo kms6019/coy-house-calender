@@ -11,6 +11,7 @@ import '../screens/event/event_detail_screen.dart' show EventDetailScreen, Event
 import '../screens/settings/settings_screen.dart';
 import '../screens/settings/anniversary_screen.dart';
 import '../screens/report/report_screen.dart';
+import '../screens/search/search_screen.dart';
 import '../screens/wishlist/wishlist_screen.dart';
 import '../models/event_model.dart';
 
@@ -100,6 +101,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/wishlist', builder: (context, _) => const WishlistScreen()),
       GoRoute(path: '/report', builder: (context, _) => const ReportScreen()),
+      GoRoute(path: '/search', builder: (context, _) => const SearchScreen()),
     ],
   );
 });
