@@ -23,7 +23,7 @@ class NotificationService {
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
 
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const android = AndroidInitializationSettings('@drawable/ic_notification');
     await _plugin.initialize(
       const InitializationSettings(android: android),
       onDidReceiveNotificationResponse: _onNotificationTap,
