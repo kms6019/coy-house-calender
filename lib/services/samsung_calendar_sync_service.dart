@@ -114,9 +114,16 @@ class SamsungCalendarSyncService {
     if (ids.isEmpty) return {};
     final calendarId = await _mapping.getCalendarId();
     if (calendarId == null) return {};
+    // 기간 미지정 시 플러그인이 끝을 Long.MAX_VALUE로 잡아 Instances 쿼리가
+    // 깨질 수 있어 명시적 범위를 함께 전달한다.
+    final now = DateTime.now();
     final result = await _plugin.retrieveEvents(
       calendarId,
-      RetrieveEventsParams(eventIds: ids),
+      RetrieveEventsParams(
+        eventIds: ids,
+        startDate: DateTime(now.year - 5),
+        endDate: DateTime(now.year + 5),
+      ),
     );
     if (result.hasErrors || result.data == null) {
       debugPrint('[SamsungCalendarSync] retrieveEvents error: ${_formatErrors(result.errors)}');

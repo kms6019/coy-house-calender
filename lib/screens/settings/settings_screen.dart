@@ -8,6 +8,7 @@ import '../../providers/calendar_provider.dart';
 import '../../services/briefing_prefs.dart';
 import '../../services/holiday_prefs.dart';
 import '../../services/notification_service.dart';
+import '../../services/samsung_calendar_sync_service.dart';
 import '../../services/widget_service.dart';
 import '../../theme/couple_palette.dart';
 
@@ -219,6 +220,10 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
 
+          // 삼성캘린더 수동 동기화
+          const _ManualSyncSection(),
+          const Divider(),
+
           // 대한민국 공휴일
           const _HolidaySection(),
           const Divider(),
@@ -400,6 +405,59 @@ class SettingsScreen extends ConsumerWidget {
         ).showSnackBar(const SnackBar(content: Text('색상 변경에 실패했습니다.')));
       }
     }
+  }
+}
+
+class _ManualSyncSection extends ConsumerStatefulWidget {
+  const _ManualSyncSection();
+
+  @override
+  ConsumerState<_ManualSyncSection> createState() => _ManualSyncSectionState();
+}
+
+class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
+  bool _busy = false;
+
+  Future<void> _sync() async {
+    setState(() => _busy = true);
+    try {
+      final events = ref.read(eventsStreamProvider).valueOrNull ?? [];
+      final anniversaries =
+          ref.read(coupleStreamProvider).valueOrNull?.anniversaries ?? const [];
+      await SamsungCalendarSyncService().syncAll(events);
+      await WidgetService.update(events, anniversaries: anniversaries);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('삼성캘린더 동기화 완료 (일정 ${events.length}건)')),
+        );
+      }
+    } catch (e) {
+      debugPrint('[Settings] manual sync error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('동기화에 실패했습니다')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.sync),
+      title: const Text('삼성캘린더 지금 동기화'),
+      subtitle: const Text('모든 일정을 기기 캘린더·위젯에 다시 반영'),
+      trailing: _busy
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : null,
+      onTap: _busy ? null : _sync,
+    );
   }
 }
 
