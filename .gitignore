@@ -50,3 +50,5 @@ package-lock.json
 
 # Claude Code local config
 .claude/
+
+hosting_public/

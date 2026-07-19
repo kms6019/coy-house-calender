@@ -8,6 +8,10 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "hosting": {
+    "public": "hosting_public",
+    "ignore": ["**/.*"]
+  },
   "flutter": {
     "platforms": {
       "android": {
