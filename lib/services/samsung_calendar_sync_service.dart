@@ -5,6 +5,14 @@ import '../models/event_model.dart';
 import 'calendar_event_mapping.dart';
 import 'device_calendar_event_builder.dart';
 
+class SamsungSyncSummary {
+  int created = 0;
+  int updated = 0;
+  int deleted = 0;
+  int failed = 0;
+  String? firstError;
+}
+
 class SamsungCalendarSyncService {
   static const _calendarName = 'CoyHouseCalender';
 
@@ -63,30 +71,35 @@ class SamsungCalendarSyncService {
     return newId;
   }
 
-  Future<void> syncEventCreate(EventModel event) async {
-    if (!_supported) return;
+  /// 성공 시 null, 실패 시 에러 메시지 반환.
+  Future<String?> syncEventCreate(EventModel event) async {
+    if (!_supported) return null;
     try {
       final calendarId = await _ensureCalendarExists();
-      if (calendarId == null) return;
+      if (calendarId == null) return '캘린더 권한/생성 실패';
       final deviceEvent = buildDeviceCalendarEvent(event, calendarId: calendarId);
       final result = await _plugin.createOrUpdateEvent(deviceEvent);
       if (result != null && result.hasErrors) {
-        debugPrint('[SamsungCalendarSync] createOrUpdateEvent error: ${_formatErrors(result.errors)}');
+        final msg = _formatErrors(result.errors);
+        debugPrint('[SamsungCalendarSync] createOrUpdateEvent error: $msg');
+        return msg;
       }
       final deviceEventId = result?.data;
-      if (deviceEventId != null) {
-        await _mapping.setDeviceEventId(event.id, deviceEventId);
-      }
+      if (deviceEventId == null) return 'createOrUpdateEvent가 ID를 반환하지 않음';
+      await _mapping.setDeviceEventId(event.id, deviceEventId);
+      return null;
     } catch (e) {
       debugPrint('[SamsungCalendarSync] create error: $e');
+      return '$e';
     }
   }
 
-  Future<void> syncEventUpdate(EventModel event) async {
-    if (!_supported) return;
+  /// 성공 시 null, 실패 시 에러 메시지 반환.
+  Future<String?> syncEventUpdate(EventModel event) async {
+    if (!_supported) return null;
     try {
       final calendarId = await _ensureCalendarExists();
-      if (calendarId == null) return;
+      if (calendarId == null) return '캘린더 권한/생성 실패';
       final existingDeviceId = await _mapping.getDeviceEventId(event.id);
       final deviceEvent = buildDeviceCalendarEvent(
         event,
@@ -95,14 +108,18 @@ class SamsungCalendarSyncService {
       );
       final result = await _plugin.createOrUpdateEvent(deviceEvent);
       if (result != null && result.hasErrors) {
-        debugPrint('[SamsungCalendarSync] createOrUpdateEvent error: ${_formatErrors(result.errors)}');
+        final msg = _formatErrors(result.errors);
+        debugPrint('[SamsungCalendarSync] createOrUpdateEvent error: $msg');
+        return msg;
       }
       final deviceEventId = result?.data;
       if (deviceEventId != null) {
         await _mapping.setDeviceEventId(event.id, deviceEventId);
       }
+      return null;
     } catch (e) {
       debugPrint('[SamsungCalendarSync] update error: $e');
+      return '$e';
     }
   }
 
@@ -141,8 +158,9 @@ class SamsungCalendarSyncService {
   /// 커플 이벤트 전체 미러 동기화 — 상대가 올린 일정도 내 기기 캘린더에 반영.
   /// 매핑에 없는 이벤트는 생성, 있는 이벤트는 갱신, 스트림에서 사라진 매핑은 삭제.
   /// proposed(제안 중) 이벤트는 확정 전이므로 제외.
-  Future<void> syncAll(List<EventModel> events) async {
-    if (!_supported || _syncAllInProgress) return;
+  Future<SamsungSyncSummary> syncAll(List<EventModel> events) async {
+    final summary = SamsungSyncSummary();
+    if (!_supported || _syncAllInProgress) return summary;
     _syncAllInProgress = true;
     try {
       final map = await _mapping.loadAll();
@@ -153,23 +171,33 @@ class SamsungCalendarSyncService {
       final existingDeviceIds = await _retrieveExistingDeviceIds(map.values);
       for (final event in active) {
         final deviceId = map[event.id];
+        final String? error;
         if (deviceId != null && existingDeviceIds.contains(deviceId)) {
-          await syncEventUpdate(event);
+          error = await syncEventUpdate(event);
+          if (error == null) summary.updated++;
         } else {
           if (deviceId != null) await _mapping.removeDeviceEventId(event.id);
-          await syncEventCreate(event);
+          error = await syncEventCreate(event);
+          if (error == null) summary.created++;
+        }
+        if (error != null) {
+          summary.failed++;
+          summary.firstError ??= '${event.title}: $error';
         }
       }
       final activeIds = active.map((e) => e.id).toSet();
       for (final staleId
           in map.keys.where((id) => !activeIds.contains(id)).toList()) {
         await syncEventDelete(staleId);
+        summary.deleted++;
       }
     } catch (e) {
       debugPrint('[SamsungCalendarSync] syncAll error: $e');
+      summary.firstError ??= '$e';
     } finally {
       _syncAllInProgress = false;
     }
+    return summary;
   }
 
   Future<void> syncEventDelete(String eventId) async {

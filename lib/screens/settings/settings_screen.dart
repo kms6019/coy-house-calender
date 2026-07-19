@@ -424,11 +424,18 @@ class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
       final events = ref.read(eventsStreamProvider).valueOrNull ?? [];
       final anniversaries =
           ref.read(coupleStreamProvider).valueOrNull?.anniversaries ?? const [];
-      await SamsungCalendarSyncService().syncAll(events);
+      final s = await SamsungCalendarSyncService().syncAll(events);
       await WidgetService.update(events, anniversaries: anniversaries);
       if (mounted) {
+        final msg = StringBuffer(
+          '동기화: 생성 ${s.created} · 갱신 ${s.updated} · 삭제 ${s.deleted} · 실패 ${s.failed}',
+        );
+        if (s.firstError != null) msg.write('\n${s.firstError}');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('삼성캘린더 동기화 완료 (일정 ${events.length}건)')),
+          SnackBar(
+            content: Text('$msg'),
+            duration: const Duration(seconds: 8),
+          ),
         );
       }
     } catch (e) {
