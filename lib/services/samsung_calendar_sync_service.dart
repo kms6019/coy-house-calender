@@ -153,6 +153,39 @@ class SamsungCalendarSyncService {
         .toSet();
   }
 
+  /// 전용 캘린더 안에서 매핑에 없는 고아 이벤트 삭제.
+  /// CoyHouseCalender 캘린더는 앱 전용이므로 매핑에 없는 항목은
+  /// 과거 버그로 남은 찌꺼기다 (예: 날짜 수정 중 매핑이 덮여 고아가 된 항목).
+  Future<int> _deleteOrphans() async {
+    final calendarId = await _mapping.getCalendarId();
+    if (calendarId == null) return 0;
+    final now = DateTime.now();
+    final result = await _plugin.retrieveEvents(
+      calendarId,
+      RetrieveEventsParams(
+        startDate: DateTime(now.year - 5),
+        endDate: DateTime(now.year + 5),
+      ),
+    );
+    if (result.hasErrors || result.data == null) return 0;
+    final mappedIds = (await _mapping.loadAll()).values.toSet();
+    final orphanIds = result.data!
+        .map((e) => e.eventId)
+        .whereType<String>()
+        .where((id) => !mappedIds.contains(id))
+        .toSet();
+    var deleted = 0;
+    for (final id in orphanIds) {
+      final del = await _plugin.deleteEvent(calendarId, id);
+      if (del.hasErrors) {
+        debugPrint('[SamsungCalendarSync] orphan delete error: ${_formatErrors(del.errors)}');
+      } else {
+        deleted++;
+      }
+    }
+    return deleted;
+  }
+
   static bool _syncAllInProgress = false;
 
   /// 커플 이벤트 전체 미러 동기화 — 상대가 올린 일정도 내 기기 캘린더에 반영.
@@ -191,6 +224,7 @@ class SamsungCalendarSyncService {
         await syncEventDelete(staleId);
         summary.deleted++;
       }
+      summary.deleted += await _deleteOrphans();
     } catch (e) {
       debugPrint('[SamsungCalendarSync] syncAll error: $e');
       summary.firstError ??= '$e';
