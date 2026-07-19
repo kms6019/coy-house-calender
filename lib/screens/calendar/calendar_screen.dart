@@ -120,32 +120,6 @@ class CalendarScreen extends ConsumerWidget {
                               ),
                             ),
                           ),
-                        IconButton(
-                          icon: const Icon(Icons.search, color: Colors.white),
-                          onPressed: () => context.push('/search'),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.checklist,
-                            color: Colors.white,
-                          ),
-                          onPressed: () => context.push('/wishlist'),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.settings_outlined,
-                            color: Colors.white,
-                          ),
-                          onPressed: () => context.push('/settings'),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.add_circle_outline,
-                            color: Colors.white,
-                          ),
-                          onPressed: () =>
-                              context.push('/event/new', extra: selectedDay),
-                        ),
                       ],
                     ),
                   ),
@@ -212,12 +186,110 @@ class CalendarScreen extends ConsumerWidget {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: _purple,
-        onPressed: goToToday,
-        label: const Text('오늘', style: TextStyle(color: Colors.white)),
-        icon: const Icon(Icons.today, color: Colors.white),
+      floatingActionButton: _FabMenu(
+        onToday: goToToday,
+        selectedDay: selectedDay,
       ),
+    );
+  }
+}
+
+/// 오른쪽 아래 원형 메뉴 — 누르면 작은 원 버튼들이 펼쳐진다.
+class _FabMenu extends StatefulWidget {
+  final VoidCallback onToday;
+  final DateTime selectedDay;
+  const _FabMenu({required this.onToday, required this.selectedDay});
+
+  @override
+  State<_FabMenu> createState() => _FabMenuState();
+}
+
+class _FabMenuState extends State<_FabMenu>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+  );
+  bool _open = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _open = !_open);
+    _open ? _controller.forward() : _controller.reverse();
+  }
+
+  Widget _item(int index, IconData icon, String label, VoidCallback onTap) {
+    final anim = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(0.1 * index, 1, curve: Curves.easeOutBack),
+    );
+    return ScaleTransition(
+      scale: anim,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+            ),
+            const SizedBox(width: 10),
+            FloatingActionButton.small(
+              heroTag: 'fab_$label',
+              backgroundColor: Colors.white,
+              foregroundColor: _purple,
+              onPressed: () {
+                _toggle();
+                onTap();
+              },
+              child: Icon(icon),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (_open || _controller.isAnimating) ...[
+          _item(4, Icons.settings_outlined, '설정',
+              () => context.push('/settings')),
+          _item(3, Icons.checklist, '위시리스트',
+              () => context.push('/wishlist')),
+          _item(2, Icons.search, '검색', () => context.push('/search')),
+          _item(1, Icons.today, '오늘', widget.onToday),
+          _item(0, Icons.edit_calendar, '일정 추가',
+              () => context.push('/event/new', extra: widget.selectedDay)),
+        ],
+        FloatingActionButton(
+          heroTag: 'fab_main',
+          backgroundColor: _purple,
+          onPressed: _toggle,
+          child: AnimatedRotation(
+            turns: _open ? 0.125 : 0,
+            duration: const Duration(milliseconds: 220),
+            child: const Icon(Icons.add, color: Colors.white, size: 30),
+          ),
+        ),
+      ],
     );
   }
 }
