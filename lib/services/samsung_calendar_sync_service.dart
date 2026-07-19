@@ -106,6 +106,29 @@ class SamsungCalendarSyncService {
     }
   }
 
+  /// 매핑에 저장된 기기 이벤트 ID 중 실제 기기 캘린더에 남아 있는 것만 반환.
+  Future<Set<String>> _retrieveExistingDeviceIds(
+    Iterable<String> deviceIds,
+  ) async {
+    final ids = deviceIds.toList();
+    if (ids.isEmpty) return {};
+    final calendarId = await _mapping.getCalendarId();
+    if (calendarId == null) return {};
+    final result = await _plugin.retrieveEvents(
+      calendarId,
+      RetrieveEventsParams(eventIds: ids),
+    );
+    if (result.hasErrors || result.data == null) {
+      debugPrint('[SamsungCalendarSync] retrieveEvents error: ${_formatErrors(result.errors)}');
+      // 조회 실패 시 전부 존재한다고 보고 기존 update 경로 유지 (중복 생성 방지)
+      return ids.toSet();
+    }
+    return result.data!
+        .map((e) => e.eventId)
+        .whereType<String>()
+        .toSet();
+  }
+
   static bool _syncAllInProgress = false;
 
   /// 커플 이벤트 전체 미러 동기화 — 상대가 올린 일정도 내 기기 캘린더에 반영.
@@ -117,10 +140,16 @@ class SamsungCalendarSyncService {
     try {
       final map = await _mapping.loadAll();
       final active = events.where((e) => !e.isProposed).toList();
+      // 사용자가 삼성캘린더에서 직접 지운 이벤트는 매핑이 남아 있어도
+      // 기기에 없으므로 update가 조용히 무시된다 → 실제 존재 여부 확인 후
+      // 없으면 생성 경로로 보낸다.
+      final existingDeviceIds = await _retrieveExistingDeviceIds(map.values);
       for (final event in active) {
-        if (map.containsKey(event.id)) {
+        final deviceId = map[event.id];
+        if (deviceId != null && existingDeviceIds.contains(deviceId)) {
           await syncEventUpdate(event);
         } else {
+          if (deviceId != null) await _mapping.removeDeviceEventId(event.id);
           await syncEventCreate(event);
         }
       }
