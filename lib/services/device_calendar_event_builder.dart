@@ -25,13 +25,25 @@ Event buildDeviceCalendarEvent(
   String? deviceEventId,
 }) {
   final end = event.endDateTime ?? event.startDateTime;
+  // 종일 이벤트는 Android CalendarProvider 규약상 UTC 자정 기준으로 저장해야
+  // 날짜가 하루 밀리지 않는다. DTEND는 exclusive → 종료일 다음날 자정.
+  final tz.TZDateTime startTz;
+  final tz.TZDateTime endTz;
+  if (event.isAllDay) {
+    final s = event.startDateTime;
+    startTz = tz.TZDateTime.utc(s.year, s.month, s.day);
+    endTz = tz.TZDateTime.utc(end.year, end.month, end.day + 1);
+  } else {
+    startTz = tz.TZDateTime.from(event.startDateTime, tz.local);
+    endTz = tz.TZDateTime.from(end, tz.local);
+  }
   return Event(
     calendarId,
     eventId: deviceEventId,
     title: event.title,
     description: event.description,
-    start: tz.TZDateTime.from(event.startDateTime, tz.local),
-    end: tz.TZDateTime.from(end, tz.local),
+    start: startTz,
+    end: endTz,
     allDay: event.isAllDay,
     recurrenceRule: _recurrenceRule(event),
   );
