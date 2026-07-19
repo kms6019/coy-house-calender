@@ -26,13 +26,14 @@ Event buildDeviceCalendarEvent(
 }) {
   final end = event.endDateTime ?? event.startDateTime;
   // 종일 이벤트는 Android CalendarProvider 규약상 UTC 자정 기준으로 저장해야
-  // 날짜가 하루 밀리지 않는다. DTEND는 exclusive → 종료일 다음날 자정.
+  // 날짜가 하루 밀리지 않는다. 삼성캘린더는 DTEND 날짜를 그대로 종료일로
+  // 표시하므로(+1일 하면 다음날까지로 보임) 종료일 자정을 그대로 쓴다.
   final tz.TZDateTime startTz;
   final tz.TZDateTime endTz;
   if (event.isAllDay) {
     final s = event.startDateTime;
     startTz = tz.TZDateTime.utc(s.year, s.month, s.day);
-    endTz = tz.TZDateTime.utc(end.year, end.month, end.day + 1);
+    endTz = tz.TZDateTime.utc(end.year, end.month, end.day);
   } else {
     startTz = tz.TZDateTime.from(event.startDateTime, tz.local);
     endTz = tz.TZDateTime.from(end, tz.local);

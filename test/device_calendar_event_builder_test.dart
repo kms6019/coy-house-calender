@@ -40,15 +40,15 @@ void main() {
     );
     final device = buildDeviceCalendarEvent(e, calendarId: 'cal');
     expect(device.start, tz.TZDateTime.utc(2026, 7, 22));
-    // DTEND는 exclusive — 다음날 UTC 자정
-    expect(device.end, tz.TZDateTime.utc(2026, 7, 23));
+    // 삼성캘린더는 DTEND 날짜를 그대로 종료일로 표시 — 종료일 자정 그대로
+    expect(device.end, tz.TZDateTime.utc(2026, 7, 22));
   });
 
   test('종일 이벤트 end 없으면 시작일 하루짜리', () {
     final e = _event(start: DateTime(2026, 7, 22), isAllDay: true);
     final device = buildDeviceCalendarEvent(e, calendarId: 'cal');
     expect(device.start, tz.TZDateTime.utc(2026, 7, 22));
-    expect(device.end, tz.TZDateTime.utc(2026, 7, 23));
+    expect(device.end, tz.TZDateTime.utc(2026, 7, 22));
   });
 
   test('시간 지정 이벤트는 로컬 타임존 유지', () {
