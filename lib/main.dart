@@ -10,6 +10,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'models/anniversary_model.dart';
 import 'models/event_model.dart';
+import 'providers/auth_provider.dart' show currentUserModelProvider;
 import 'router/app_router.dart';
 import 'services/notification_service.dart';
 import 'services/samsung_calendar_sync_service.dart';
@@ -88,21 +89,14 @@ class CoyHouseCalenderApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final user = ref.watch(currentUserModelProvider).valueOrNull;
+    final seedColor = user?.themeSeedColor ?? kPrimaryPurple.toARGB32();
     return MaterialApp.router(
       title: 'CoyHouse Calendar',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: kPrimaryPurple,
-          brightness: Brightness.light,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: kPrimaryPurple,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        useMaterial3: true,
-      ),
+      theme: buildLightTheme(seedColor),
+      darkTheme: buildDarkTheme(seedColor),
+      themeMode: resolveThemeMode(user?.themeMode ?? 'system'),
       routerConfig: router,
     );
   }
