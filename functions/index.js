@@ -61,7 +61,7 @@ function formatStart(timestamp, isAllDay) {
   return isAllDay ? `${base} 종일` : `${base} ${get("hour")}:${get("minute")}`;
 }
 
-async function sendToPartner(event, actorUid, notificationTitle) {
+async function sendToPartner(event, eventId, actorUid, notificationTitle) {
   const db = admin.firestore();
 
   const coupleId = event.coupleId ?? "";
@@ -89,14 +89,23 @@ async function sendToPartner(event, actorUid, notificationTitle) {
     ? formatStart(event.startDateTime, event.isAllDay === true)
     : "";
 
+  const notifTitle = `${actorName}님이 ${notificationTitle}`;
+  const notifBody = when ? `${title} · ${when}` : title;
+
   await admin.messaging().send({
     token: fcmToken,
     notification: {
-      title: `${actorName}님이 ${notificationTitle}`,
-      body: when ? `${title} · ${when}` : title,
+      title: notifTitle,
+      body: notifBody,
     },
-    // 수신 기기가 백그라운드에서 캘린더/위젯 동기화를 돌리도록 데이터 페이로드 동봉
-    data: { type: "event_sync" },
+    // 수신 기기가 백그라운드에서 캘린더/위젯 동기화를 돌리고, 알림 기록에 남기도록
+    // 데이터 페이로드에 eventId/title/body를 함께 보낸다.
+    data: {
+      type: "event_sync",
+      eventId: eventId ?? "",
+      title: notifTitle,
+      body: notifBody,
+    },
     android: { priority: "high" },
   });
 }
@@ -106,7 +115,7 @@ exports.onEventCreated = onDocumentCreated("events/{eventId}", async (event) => 
   if (!data) return;
   const title =
     data.status === "proposed" ? "일정을 제안했어요" : "일정을 등록했어요";
-  await sendToPartner(data, data.createdByUid ?? "", title);
+  await sendToPartner(data, event.params.eventId, data.createdByUid ?? "", title);
 });
 
 exports.onEventUpdated = onDocumentUpdated("events/{eventId}", async (event) => {
@@ -117,10 +126,10 @@ exports.onEventUpdated = onDocumentUpdated("events/{eventId}", async (event) => 
 
   // 제안 수락: proposed → confirmed 전이는 다른 필드 변경 없어도 발송
   if (before.status === "proposed" && after.status === "confirmed") {
-    await sendToPartner(after, actorUid, "제안을 수락했어요");
+    await sendToPartner(after, event.params.eventId, actorUid, "제안을 수락했어요");
     return;
   }
 
   if (!hasMeaningfulChange(before, after)) return;
-  await sendToPartner(after, actorUid, "일정을 수정했어요");
+  await sendToPartner(after, event.params.eventId, actorUid, "일정을 수정했어요");
 });

@@ -125,6 +125,10 @@ class FirestoreService {
     }
   }
 
+  Future<void> updateUserSettings(String uid, Map<String, dynamic> fields) {
+    return _db.collection('users').doc(uid).set(fields, SetOptions(merge: true));
+  }
+
   // ── Events ──────────────────────────────────────────────
 
   Stream<List<EventModel>> eventsStream(String coupleId) {
