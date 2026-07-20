@@ -12,15 +12,29 @@ import 'models/anniversary_model.dart';
 import 'models/event_model.dart';
 import 'providers/auth_provider.dart' show currentUserModelProvider;
 import 'router/app_router.dart';
+import 'services/notification_history_service.dart';
 import 'services/notification_service.dart';
 import 'services/samsung_calendar_sync_service.dart';
 import 'services/widget_service.dart';
 import 'theme/app_theme.dart';
 
+Future<void> _recordNotificationHistory(RemoteMessage message) async {
+  final entry = NotificationHistoryEntry.fromFcmData(message.data);
+  if (entry == null) return;
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return;
+  try {
+    await NotificationHistoryService().record(uid, entry);
+  } catch (_) {
+    // 기록 실패는 조용히 무시 — 알림 자체 수신/동기화는 계속 진행
+  }
+}
+
 // 백그라운드 FCM 핸들러 (최상위 함수여야 함)
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await _recordNotificationHistory(message);
   // 상대 일정 변경 푸시 → 앱 안 열어도 삼성캘린더/위젯 동기화
   if (message.data['type'] != 'event_sync') return;
   try {
@@ -68,9 +82,8 @@ Future<void> _initFcm() async {
   );
 
   // 포그라운드 메시지 처리
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    // 포그라운드에서는 앱이 열려 있으므로 별도 처리 불필요
-    // 필요 시 로컬 알림으로 표시 가능
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+    await _recordNotificationHistory(message);
   });
 }
 
