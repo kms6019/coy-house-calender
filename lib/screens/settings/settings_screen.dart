@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/couple_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
+import '../../services/holiday_prefs.dart';
 import '../../services/notification_service.dart';
 import '../../services/samsung_calendar_sync_service.dart';
 import '../../services/widget_service.dart';
@@ -481,6 +482,7 @@ class _HolidaySection extends ConsumerWidget {
         onChanged: (value) async {
           final uid = ref.read(authStateProvider).valueOrNull?.uid;
           if (uid == null) return;
+          await HolidayPrefs.saveEnabled(value);
           await ref
               .read(firestoreServiceProvider)
               .updateUserSettings(uid, {'showKoreanHolidays': value});
