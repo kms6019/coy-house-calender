@@ -27,6 +27,7 @@ class CalendarScreen extends ConsumerWidget {
     ref.watch(widgetSyncProvider);
     ref.watch(alarmSyncProvider);
     ref.watch(deviceCalendarSyncProvider);
+    ref.watch(settingsMigrationProvider);
 
     void changeMonth(int delta) {
       final next = DateTime(focusedDay.year, focusedDay.month + delta, 1);

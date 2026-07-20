@@ -5,11 +5,10 @@ import '../models/couple_model.dart';
 import '../models/korean_holiday.dart';
 import '../models/wish_model.dart';
 import '../services/firestore_service.dart';
-import '../services/briefing_prefs.dart';
-import '../services/holiday_prefs.dart';
 import '../services/korean_holiday_service.dart';
 import '../services/notification_service.dart';
 import '../services/samsung_calendar_sync_service.dart';
+import '../services/settings_migration.dart';
 import '../services/widget_service.dart';
 import 'auth_provider.dart';
 
@@ -21,15 +20,12 @@ final koreanHolidayServiceProvider = Provider<KoreanHolidayService>(
   (ref) => KoreanHolidayService.instance,
 );
 
-final holidayDisplayEnabledProvider = FutureProvider<bool>((ref) {
-  return HolidayPrefs.loadEnabled();
-});
-
 final koreanHolidaysProvider = FutureProvider.family<List<KoreanHoliday>, int>((
   ref,
   year,
 ) async {
-  final enabled = await ref.watch(holidayDisplayEnabledProvider.future);
+  final enabled =
+      ref.watch(currentUserModelProvider).valueOrNull?.showKoreanHolidays ?? true;
   if (!enabled) return const <KoreanHoliday>[];
   return ref.watch(koreanHolidayServiceProvider).getHolidaysForYear(year);
 });
@@ -78,15 +74,13 @@ final alarmSyncProvider = Provider<void>((ref) {
     });
   }
 
-  // 아침 브리핑 재스케줄 (기기 설정 기반)
-  BriefingPrefs.load().then((p) {
-    ns.scheduleBriefings(
-      events: events,
-      enabled: p.enabled,
-      hour: p.hour,
-      minute: p.minute,
-    );
-  });
+  final user = ref.watch(currentUserModelProvider).valueOrNull;
+  ns.scheduleBriefings(
+    events: events,
+    enabled: user?.briefingEnabled ?? false,
+    hour: user?.briefingHour ?? 8,
+    minute: user?.briefingMinute ?? 0,
+  );
 });
 
 // 커플 이벤트 전체를 기기(삼성) 캘린더에 미러 동기화 — 상대가 올린 일정 포함
@@ -107,3 +101,10 @@ final selectedDateProvider = StateProvider<DateTime>(
 final focusedDateProvider = StateProvider<DateTime>(
   (ref) => DateUtils.dateOnly(DateTime.now()),
 );
+
+// 구버전 SharedPreferences 설정을 Firestore로 1회 승격
+final settingsMigrationProvider = Provider<void>((ref) {
+  final uid = ref.watch(authStateProvider).valueOrNull?.uid;
+  if (uid == null) return;
+  SettingsMigrationService().runIfNeeded(uid);
+});

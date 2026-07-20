@@ -5,8 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../models/couple_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
-import '../../services/briefing_prefs.dart';
-import '../../services/holiday_prefs.dart';
 import '../../services/notification_service.dart';
 import '../../services/samsung_calendar_sync_service.dart';
 import '../../services/widget_service.dart';
@@ -473,17 +471,19 @@ class _HolidaySection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final enabledAsync = ref.watch(holidayDisplayEnabledProvider);
-    return enabledAsync.when(
-      data: (enabled) => SwitchListTile(
+    final userAsync = ref.watch(currentUserModelProvider);
+    return userAsync.when(
+      data: (user) => SwitchListTile(
         secondary: const Icon(Icons.flag_outlined),
         title: const Text('대한민국 공휴일 표시'),
         subtitle: const Text('법정·대체·임시공휴일과 선거일을 달력에 표시'),
-        value: enabled,
+        value: user?.showKoreanHolidays ?? true,
         onChanged: (value) async {
-          await HolidayPrefs.saveEnabled(value);
-          ref.invalidate(holidayDisplayEnabledProvider);
-          ref.invalidate(koreanHolidaysProvider);
+          final uid = ref.read(authStateProvider).valueOrNull?.uid;
+          if (uid == null) return;
+          await ref
+              .read(firestoreServiceProvider)
+              .updateUserSettings(uid, {'showKoreanHolidays': value});
 
           final events = ref.read(eventsStreamProvider).valueOrNull ?? [];
           final anniversaries =
@@ -506,69 +506,70 @@ class _HolidaySection extends ConsumerWidget {
   }
 }
 
-class _BriefingSection extends ConsumerStatefulWidget {
+class _BriefingSection extends ConsumerWidget {
   const _BriefingSection();
 
-  @override
-  ConsumerState<_BriefingSection> createState() => _BriefingSectionState();
-}
-
-class _BriefingSectionState extends ConsumerState<_BriefingSection> {
-  BriefingPrefs? _prefs;
-
-  @override
-  void initState() {
-    super.initState();
-    BriefingPrefs.load().then((p) {
-      if (mounted) setState(() => _prefs = p);
+  Future<void> _apply(
+    WidgetRef ref, {
+    required bool enabled,
+    required int hour,
+    required int minute,
+  }) async {
+    final uid = ref.read(authStateProvider).valueOrNull?.uid;
+    if (uid == null) return;
+    await ref.read(firestoreServiceProvider).updateUserSettings(uid, {
+      'briefingEnabled': enabled,
+      'briefingHour': hour,
+      'briefingMinute': minute,
     });
-  }
-
-  Future<void> _apply({required bool enabled, int? hour, int? minute}) async {
-    final h = hour ?? _prefs?.hour ?? 8;
-    final m = minute ?? _prefs?.minute ?? 0;
-    await BriefingPrefs.save(enabled: enabled, hour: h, minute: m);
-    if (!mounted) return;
-    setState(
-      () => _prefs = BriefingPrefs(enabled: enabled, hour: h, minute: m),
-    );
     final events = ref.read(eventsStreamProvider).valueOrNull ?? [];
     await NotificationService().scheduleBriefings(
       events: events,
       enabled: enabled,
-      hour: h,
-      minute: m,
+      hour: hour,
+      minute: minute,
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final prefs = _prefs;
-    if (prefs == null) return const SizedBox.shrink();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserModelProvider).valueOrNull;
+    if (user == null) return const SizedBox.shrink();
     return Column(
       children: [
         SwitchListTile(
           secondary: const Icon(Icons.wb_sunny_outlined),
           title: const Text('아침 브리핑'),
           subtitle: const Text('매일 아침 오늘 일정 요약 알림 (일정 없는 날 제외)'),
-          value: prefs.enabled,
-          onChanged: (v) => _apply(enabled: v),
+          value: user.briefingEnabled,
+          onChanged: (v) => _apply(
+            ref,
+            enabled: v,
+            hour: user.briefingHour,
+            minute: user.briefingMinute,
+          ),
         ),
-        if (prefs.enabled)
+        if (user.briefingEnabled)
           ListTile(
             contentPadding: const EdgeInsets.only(left: 72, right: 16),
             title: const Text('브리핑 시간'),
             trailing: Text(
-              '${prefs.hour.toString().padLeft(2, '0')}:${prefs.minute.toString().padLeft(2, '0')}',
+              '${user.briefingHour.toString().padLeft(2, '0')}:${user.briefingMinute.toString().padLeft(2, '0')}',
               style: const TextStyle(fontSize: 16),
             ),
             onTap: () async {
               final picked = await showTimePicker(
                 context: context,
-                initialTime: TimeOfDay(hour: prefs.hour, minute: prefs.minute),
+                initialTime:
+                    TimeOfDay(hour: user.briefingHour, minute: user.briefingMinute),
               );
               if (picked != null) {
-                _apply(enabled: true, hour: picked.hour, minute: picked.minute);
+                _apply(
+                  ref,
+                  enabled: true,
+                  hour: picked.hour,
+                  minute: picked.minute,
+                );
               }
             },
           ),
