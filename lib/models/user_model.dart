@@ -7,6 +7,12 @@ class UserModel {
   final String coupleId;
   final String fcmToken;
   final DateTime createdAt;
+  final bool showKoreanHolidays;
+  final bool briefingEnabled;
+  final int briefingHour;
+  final int briefingMinute;
+  final String themeMode;
+  final int? themeSeedColor;
 
   const UserModel({
     required this.uid,
@@ -15,6 +21,12 @@ class UserModel {
     required this.coupleId,
     required this.fcmToken,
     required this.createdAt,
+    this.showKoreanHolidays = true,
+    this.briefingEnabled = false,
+    this.briefingHour = 8,
+    this.briefingMinute = 0,
+    this.themeMode = 'system',
+    this.themeSeedColor,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -27,6 +39,12 @@ class UserModel {
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
+      showKoreanHolidays: map['showKoreanHolidays'] as bool? ?? true,
+      briefingEnabled: map['briefingEnabled'] as bool? ?? false,
+      briefingHour: map['briefingHour'] as int? ?? 8,
+      briefingMinute: map['briefingMinute'] as int? ?? 0,
+      themeMode: map['themeMode'] as String? ?? 'system',
+      themeSeedColor: map['themeSeedColor'] as int?,
     );
   }
 
@@ -38,6 +56,12 @@ class UserModel {
       'coupleId': coupleId,
       'fcmToken': fcmToken,
       'createdAt': Timestamp.fromDate(createdAt),
+      'showKoreanHolidays': showKoreanHolidays,
+      'briefingEnabled': briefingEnabled,
+      'briefingHour': briefingHour,
+      'briefingMinute': briefingMinute,
+      'themeMode': themeMode,
+      'themeSeedColor': themeSeedColor,
     };
   }
 
@@ -48,6 +72,12 @@ class UserModel {
     String? coupleId,
     String? fcmToken,
     DateTime? createdAt,
+    bool? showKoreanHolidays,
+    bool? briefingEnabled,
+    int? briefingHour,
+    int? briefingMinute,
+    String? themeMode,
+    int? themeSeedColor,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -56,6 +86,12 @@ class UserModel {
       coupleId: coupleId ?? this.coupleId,
       fcmToken: fcmToken ?? this.fcmToken,
       createdAt: createdAt ?? this.createdAt,
+      showKoreanHolidays: showKoreanHolidays ?? this.showKoreanHolidays,
+      briefingEnabled: briefingEnabled ?? this.briefingEnabled,
+      briefingHour: briefingHour ?? this.briefingHour,
+      briefingMinute: briefingMinute ?? this.briefingMinute,
+      themeMode: themeMode ?? this.themeMode,
+      themeSeedColor: themeSeedColor ?? this.themeSeedColor,
     );
   }
 }
