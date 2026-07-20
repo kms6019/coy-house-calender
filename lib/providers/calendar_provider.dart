@@ -74,12 +74,20 @@ final alarmSyncProvider = Provider<void>((ref) {
     });
   }
 
-  final user = ref.watch(currentUserModelProvider).valueOrNull;
+  final briefing = ref.watch(
+    currentUserModelProvider.select(
+      (async) => (
+        async.valueOrNull?.briefingEnabled ?? false,
+        async.valueOrNull?.briefingHour ?? 8,
+        async.valueOrNull?.briefingMinute ?? 0,
+      ),
+    ),
+  );
   ns.scheduleBriefings(
     events: events,
-    enabled: user?.briefingEnabled ?? false,
-    hour: user?.briefingHour ?? 8,
-    minute: user?.briefingMinute ?? 0,
+    enabled: briefing.$1,
+    hour: briefing.$2,
+    minute: briefing.$3,
   );
 });
 
