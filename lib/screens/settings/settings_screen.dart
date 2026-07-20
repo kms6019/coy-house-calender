@@ -10,6 +10,7 @@ import '../../services/notification_service.dart';
 import '../../services/samsung_calendar_sync_service.dart';
 import '../../services/widget_service.dart';
 import '../../theme/couple_palette.dart';
+import '../../theme/app_theme.dart' show kPrimaryPurple;
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -199,6 +200,10 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/anniversaries'),
           ),
+          const Divider(),
+
+          // 테마
+          const _ThemeSection(),
           const Divider(),
 
           // 월간 리포트
@@ -463,6 +468,101 @@ class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
             )
           : null,
       onTap: _busy ? null : _sync,
+    );
+  }
+}
+
+class _ThemeSection extends ConsumerWidget {
+  const _ThemeSection();
+
+  Future<void> _pickColor(BuildContext context, WidgetRef ref, int? current) async {
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('테마 색상'),
+        content: SizedBox(
+          width: 280,
+          child: GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 4,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            children: kCouplePalette.map((c) {
+              final isMine = c == current;
+              return InkWell(
+                onTap: () => Navigator.pop(ctx, c),
+                customBorder: const CircleBorder(),
+                child: Container(
+                  decoration: BoxDecoration(color: Color(c), shape: BoxShape.circle),
+                  child: isMine
+                      ? Icon(
+                          Icons.check,
+                          color: Color(c).computeLuminance() > 0.5
+                              ? Colors.black54
+                              : Colors.white,
+                        )
+                      : null,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    final uid = ref.read(authStateProvider).valueOrNull?.uid;
+    if (uid == null) return;
+    await ref
+        .read(firestoreServiceProvider)
+        .updateUserSettings(uid, {'themeSeedColor': picked});
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserModelProvider).valueOrNull;
+    final mode = user?.themeMode ?? 'system';
+    final seedColor = user?.themeSeedColor ?? kPrimaryPurple.toARGB32();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          leading: const Icon(Icons.palette_outlined),
+          title: const Text('테마'),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'system', label: Text('시스템')),
+              ButtonSegment(value: 'light', label: Text('라이트')),
+              ButtonSegment(value: 'dark', label: Text('다크')),
+            ],
+            selected: {mode},
+            onSelectionChanged: (selection) async {
+              final uid = ref.read(authStateProvider).valueOrNull?.uid;
+              if (uid == null) return;
+              await ref
+                  .read(firestoreServiceProvider)
+                  .updateUserSettings(uid, {'themeMode': selection.first});
+            },
+          ),
+        ),
+        ListTile(
+          contentPadding: const EdgeInsets.only(left: 16, right: 16, top: 8),
+          title: const Text('색상'),
+          trailing: GestureDetector(
+            onTap: () => _pickColor(context, ref, user?.themeSeedColor),
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(color: Color(seedColor), shape: BoxShape.circle),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
