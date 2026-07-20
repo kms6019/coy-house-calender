@@ -13,6 +13,7 @@ import '../screens/settings/anniversary_screen.dart';
 import '../screens/report/report_screen.dart';
 import '../screens/search/search_screen.dart';
 import '../screens/settings/import_screen.dart';
+import '../screens/settings/notification_history_screen.dart';
 import '../screens/wishlist/wishlist_screen.dart';
 import '../models/event_model.dart';
 
@@ -106,6 +107,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings/import',
         builder: (context, _) => const ImportScreen(),
+      ),
+      GoRoute(
+        path: '/settings/notifications',
+        builder: (context, _) => const NotificationHistoryScreen(),
       ),
     ],
   );

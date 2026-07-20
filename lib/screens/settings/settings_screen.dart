@@ -202,6 +202,15 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
 
+          // 알림 기록
+          ListTile(
+            leading: const Icon(Icons.notifications_outlined),
+            title: const Text('알림 기록'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/notifications'),
+          ),
+          const Divider(),
+
           // 테마
           const _ThemeSection(),
           const Divider(),
