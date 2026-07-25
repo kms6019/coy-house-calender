@@ -145,6 +145,21 @@ void main() {
       expect(out.first.alarmAt, DateTime(2026, 7, 25, 11));
     });
 
+    test('반복 이벤트도 알람은 지났고 회차 시작이 미래면 포함된다', () {
+      // 매주 월요일 10:00, 알람 24시간(1440분) 전 = 직전 일요일 10:00
+      // 기준 시각을 일요일 7/26 12:00로 두면 7/27(월) 회차의 알람은 이미 울렸다.
+      final sunday = DateTime(2026, 7, 26, 12, 0);
+      final e = _event(
+        start: DateTime(2026, 7, 6, 10),
+        alarmMinutesBefore: 1440,
+        repeat: 'weekly',
+      );
+
+      final out = pastAlarms([e], sunday);
+      expect(out.first.alarmAt, DateTime(2026, 7, 26, 10));
+      expect(out.first.event.startDateTime, DateTime(2026, 7, 27, 10));
+    });
+
     test('결과는 alarmAt 내림차순으로 정렬된다', () {
       final older = _event(
         id: 'older',

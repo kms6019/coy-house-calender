@@ -18,11 +18,19 @@ List<PastAlarm> pastAlarms(
   int withinDays = 30,
 }) {
   final cutoff = now.subtract(Duration(days: withinDays));
+  final alarmed = events.where((e) => e.hasAlarm).toList();
+
+  // 알람이 일정보다 한참 앞서면 회차 시작은 아직 미래여도 알람은 이미 울렸다.
+  // 그런 회차까지 전개되도록 범위 끝을 최대 알람 간격만큼 늘린다.
+  final maxAlarmMinutes = alarmed.fold<int>(
+    0,
+    (max, e) => e.alarmMinutesBefore > max ? e.alarmMinutesBefore : max,
+  );
 
   final occurrences = expandRecurringForRange(
-    events.where((e) => e.hasAlarm).toList(),
+    alarmed,
     cutoff,
-    now,
+    now.add(Duration(minutes: maxAlarmMinutes)),
   );
 
   final result = <PastAlarm>[];
