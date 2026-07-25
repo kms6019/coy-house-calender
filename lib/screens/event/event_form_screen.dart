@@ -9,6 +9,7 @@ import '../../services/notification_service.dart';
 import '../../services/samsung_calendar_sync_service.dart';
 import '../../theme/couple_palette.dart';
 import '../../theme/event_icons.dart';
+import '../../utils/conflict_utils.dart';
 
 class EventFormScreen extends ConsumerStatefulWidget {
   final EventModel? event;
@@ -107,6 +108,62 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     return !_isAllDay && end.isBefore(_startDateTime);
   }
 
+  String _conflictLabel(EventModel event) {
+    final format = DateFormat('HH:mm');
+    final end = event.endDateTime;
+    final time = end != null
+        ? '${format.format(event.startDateTime)}–${format.format(end)}'
+        : format.format(event.startDateTime);
+    return '${event.title} · $time';
+  }
+
+  /// 겹치는 일정이 있으면 확인 다이얼로그를 띄운다. 저장을 계속할지 여부를 반환.
+  Future<bool> _confirmConflicts() async {
+    final events =
+        ref.read(eventsStreamProvider).valueOrNull ?? const <EventModel>[];
+    final candidate = EventModel(
+      id: widget.event?.id ?? '',
+      coupleId: '',
+      createdByUid: '',
+      title: '',
+      startDateTime: _startDateTime,
+      endDateTime: _endDateTime,
+      isAllDay: _isAllDay,
+      color: 0,
+      hasAlarm: false,
+      alarmMinutesBefore: 0,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    final conflicts = findConflicts(events, candidate);
+    if (conflicts.isEmpty) return true;
+    if (!mounted) return false;
+
+    final lines = conflicts.take(3).map(_conflictLabel).join('\n');
+    final extra =
+        conflicts.length > 3 ? '\n외 ${conflicts.length - 3}건' : '';
+
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('일정이 겹칩니다'),
+        content: Text('$lines$extra'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('그대로 저장'),
+          ),
+        ],
+      ),
+    );
+    return proceed ?? false;
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_endBeforeStart) {
@@ -115,6 +172,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       );
       return;
     }
+
+    if (!await _confirmConflicts()) return;
+    if (!mounted) return;
 
     setState(() => _loading = true);
 
