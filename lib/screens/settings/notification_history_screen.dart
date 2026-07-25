@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../models/event_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
-import '../../screens/event/event_detail_screen.dart';
 import '../../services/notification_history_service.dart';
 import '../../utils/alarm_history_utils.dart';
 import '../../utils/event_utils.dart';
@@ -70,13 +69,13 @@ class _PastAlarmList extends ConsumerWidget {
                 '${alarmFormat.format(alarm.alarmAt)} 알림'
                 ' · 일정 ${alarmFormat.format(alarm.event.startDateTime)}',
               ),
-              onTap: () => context.push(
-                '/event/detail',
-                extra: EventDetailArgs(
-                  event: alarm.event,
-                  occurrenceDate: calendarDateKey(alarm.event.startDateTime),
-                ),
-              ),
+              onTap: () {
+                final day = calendarDateKey(alarm.event.startDateTime);
+                ref.read(focusedDateProvider.notifier).state =
+                    DateTime(day.year, day.month, 1);
+                ref.read(selectedDateProvider.notifier).state = day;
+                context.go('/calendar');
+              },
             );
           },
         );

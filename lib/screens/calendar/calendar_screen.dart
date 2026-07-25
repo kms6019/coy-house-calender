@@ -273,8 +273,8 @@ class _FabMenuState extends State<_FabMenu>
         if (_open || _controller.isAnimating) ...[
           _item(4, Icons.settings_outlined, '설정',
               () => context.push('/settings')),
-          _item(3, Icons.checklist, '위시리스트',
-              () => context.push('/wishlist')),
+          _item(3, Icons.notifications_outlined, '알림 기록',
+              () => context.push('/settings/notifications')),
           _item(2, Icons.search, '검색', () => context.push('/search')),
           _item(1, Icons.today, '오늘', widget.onToday),
           _item(0, Icons.edit_calendar, '일정 추가',
