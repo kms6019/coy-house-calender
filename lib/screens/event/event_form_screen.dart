@@ -37,7 +37,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   DateTime? _endDate;
   TimeOfDay? _endTime;
   bool _isAllDay = false;
-  bool _hasAlarm = false;
+  bool _hasAlarm = true; // 새 일정은 알림 켜짐이 기본 (기존 일정은 저장된 값을 따름)
   int _alarmMinutes = 30;
   RepeatRule _repeat = RepeatRule.none;
   DateTime? _repeatUntil;
