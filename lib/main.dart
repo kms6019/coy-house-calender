@@ -13,6 +13,7 @@ import 'models/event_model.dart';
 import 'providers/auth_provider.dart' show currentUserModelProvider;
 import 'router/app_router.dart';
 import 'services/alarm_sync.dart';
+import 'services/auth_service.dart';
 import 'services/notification_history_service.dart';
 import 'services/notification_service.dart';
 import 'services/samsung_calendar_sync_service.dart';
@@ -102,6 +103,18 @@ Future<void> _initFcm() async {
     badge: true,
     sound: true,
   );
+
+  // 토큰은 재설치·데이터 삭제 등으로 회전한다. 갱신을 반영하지 않으면
+  // 서버에 남은 옛 토큰으로 발송돼 푸시가 사라진다.
+  messaging.onTokenRefresh.listen((token) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      await AuthService().updateFcmToken(uid, token);
+    } catch (_) {
+      // 다음 앱 실행 때 getToken 으로 따라잡음
+    }
+  });
 
   // 포그라운드 메시지 처리
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {

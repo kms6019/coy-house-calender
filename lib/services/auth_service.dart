@@ -39,7 +39,11 @@ class AuthService {
     return UserModel.fromMap(doc.data()!);
   }
 
+  /// update()는 문서가 없으면 예외를 던지고, 호출부가 이를 삼켜 토큰이 조용히
+  /// 유실된다. 토큰이 없으면 Cloud Function이 푸시를 아예 보내지 않으므로 merge로 쓴다.
   Future<void> updateFcmToken(String uid, String token) {
-    return _db.collection('users').doc(uid).update({'fcmToken': token});
+    return _db.collection('users').doc(uid).set({
+      'fcmToken': token,
+    }, SetOptions(merge: true));
   }
 }

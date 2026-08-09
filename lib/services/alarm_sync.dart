@@ -12,6 +12,11 @@ Future<void> syncAlarms(
   AlarmHistoryService? history,
 }) async {
   final ns = NotificationService();
+
+  // 알람을 못 거는 기기(웹·데스크톱)는 기록에 손대지 않는다. 그냥 두면 예약이
+  // 하나도 없다고 판단해 폰이 남긴 대기 중 기록을 전부 지워버린다.
+  if (!ns.supported) return;
+
   final store = history ?? AlarmHistoryService();
   final keepIds = <String>{};
 

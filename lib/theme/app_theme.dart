@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'design_tokens.dart';
 
 const kPrimaryPurple = Color(0xFF7E57C2);
 
@@ -22,11 +23,24 @@ ThemeData buildDarkTheme(int seedColor) {
 }
 
 ThemeData _buildTheme(int seedColor, Brightness brightness) {
-  final colorScheme = ColorScheme.fromSeed(
-    seedColor: Color(seedColor),
-    brightness: brightness,
-  );
   final isDark = brightness == Brightness.dark;
+
+  // 디자인 팔레트를 기준으로 삼고, 사용자가 고른 색은 accent(=primary)로만 쓴다.
+  final tokens = isDark
+      ? DesignTokens.dark(Color(seedColor))
+      : DesignTokens.light(Color(seedColor));
+
+  final colorScheme =
+      ColorScheme.fromSeed(
+        seedColor: Color(seedColor),
+        brightness: brightness,
+      ).copyWith(
+        surface: tokens.bg,
+        onSurface: tokens.ink,
+        surfaceContainerLowest: tokens.surface,
+        onSurfaceVariant: tokens.ink45,
+        outlineVariant: tokens.line,
+      );
   final base = ThemeData(
     colorScheme: colorScheme,
     brightness: brightness,
@@ -60,6 +74,7 @@ ThemeData _buildTheme(int seedColor, Brightness brightness) {
   );
 
   return base.copyWith(
+    extensions: [tokens],
     scaffoldBackgroundColor: colorScheme.surface,
     canvasColor: colorScheme.surface,
     textTheme: textTheme,

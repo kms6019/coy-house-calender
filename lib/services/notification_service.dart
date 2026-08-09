@@ -24,6 +24,9 @@ class NotificationService {
   // Windows는 flutter_local_notifications 스케줄링 미지원 → skip
   bool get _supported => !kIsWeb && !Platform.isWindows && !Platform.isMacOS && !Platform.isLinux;
 
+  /// 이 기기가 로컬 알람을 예약할 수 있는지. 웹/데스크톱은 false.
+  bool get supported => _supported;
+
   /// [requestPermission]은 백그라운드 아이솔레이트에서 끈다 — 띄울 화면이 없다.
   Future<void> init({bool requestPermission = true}) async {
     if (!_supported) return;
