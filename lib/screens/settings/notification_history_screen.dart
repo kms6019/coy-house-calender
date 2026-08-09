@@ -5,8 +5,8 @@ import 'package:intl/intl.dart';
 import '../../models/event_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
+import '../../services/alarm_history_service.dart';
 import '../../services/notification_history_service.dart';
-import '../../utils/alarm_history_utils.dart';
 import '../../utils/event_utils.dart';
 
 final _notificationHistoryProvider =
@@ -14,6 +14,12 @@ final _notificationHistoryProvider =
   final uid = ref.watch(authStateProvider).valueOrNull?.uid;
   if (uid == null) return Stream.value(const []);
   return NotificationHistoryService().streamFor(uid);
+});
+
+final _alarmHistoryProvider = StreamProvider<List<AlarmRecord>>((ref) {
+  final uid = ref.watch(authStateProvider).valueOrNull?.uid;
+  if (uid == null) return Stream.value(const []);
+  return AlarmHistoryService().stream(uid);
 });
 
 class NotificationHistoryScreen extends ConsumerWidget {
@@ -49,13 +55,15 @@ class _PastAlarmList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final eventsAsync = ref.watch(eventsStreamProvider);
+    final recordsAsync = ref.watch(_alarmHistoryProvider);
 
-    return eventsAsync.when(
-      data: (events) {
-        final alarms = pastAlarms(events, DateTime.now());
+    return recordsAsync.when(
+      data: (records) {
+        final now = DateTime.now();
+        // 아직 안 울린 예약분은 제외 — 시각이 지난 것만 "울린 알람"으로 본다
+        final alarms = records.where((r) => !r.alarmAt.isAfter(now)).toList();
         if (alarms.isEmpty) {
-          return const Center(child: Text('지난 30일간 울린 알람이 없습니다'));
+          return const Center(child: Text('아직 울린 알람이 없습니다'));
         }
         return ListView.separated(
           itemCount: alarms.length,
@@ -64,13 +72,13 @@ class _PastAlarmList extends ConsumerWidget {
             final alarm = alarms[index];
             final alarmFormat = DateFormat('M/d HH:mm');
             return ListTile(
-              title: Text(alarm.event.title),
+              title: Text(alarm.title),
               subtitle: Text(
                 '${alarmFormat.format(alarm.alarmAt)} 알림'
-                ' · 일정 ${alarmFormat.format(alarm.event.startDateTime)}',
+                ' · 일정 ${alarmFormat.format(alarm.occurrenceStart)}',
               ),
               onTap: () {
-                final day = calendarDateKey(alarm.event.startDateTime);
+                final day = calendarDateKey(alarm.occurrenceStart);
                 ref.read(focusedDateProvider.notifier).state =
                     DateTime(day.year, day.month, 1);
                 ref.read(selectedDateProvider.notifier).state = day;

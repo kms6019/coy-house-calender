@@ -21,6 +21,11 @@ service cloud.firestore {
       match /notificationHistory/{historyId} {
         allow read, write: if signedIn() && request.auth.uid == uid;
       }
+
+      // 일정 알람 예약/발화 기록
+      match /alarmHistory/{alarmId} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
     }
 
     match /couples/{coupleId} {

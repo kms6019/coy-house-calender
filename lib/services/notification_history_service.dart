@@ -60,12 +60,17 @@ class NotificationHistoryService {
   Future<void> record(String uid, NotificationHistoryEntry entry) async {
     await _collection(uid).add(entry.toMap());
 
-    final overflow = await _collection(uid)
+    final snap = await _collection(uid)
         .orderBy('receivedAt', descending: true)
         .get();
-    if (overflow.docs.length <= _maxEntries) return;
+    // serverTimestamp 미확정(null) 문서는 내림차순 정렬에서 맨 뒤로 밀려
+    // 방금 기록한 항목이 오래된 것으로 오인돼 삭제될 수 있다 → 정리 대상에서 제외.
+    final settled = snap.docs
+        .where((d) => d.data()['receivedAt'] != null)
+        .toList();
+    if (settled.length <= _maxEntries) return;
     final batch = _db.batch();
-    for (final doc in overflow.docs.skip(_maxEntries)) {
+    for (final doc in settled.skip(_maxEntries)) {
       batch.delete(doc.reference);
     }
     await batch.commit();

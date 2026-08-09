@@ -31,19 +31,16 @@ class MonthGrid extends StatelessWidget {
     final totalCells = leadingBlanks + daysInMonth;
     final weekCount = (totalCells / 7).ceil();
 
-    final weeks = <List<DateTime?>>[];
+    // 앞뒤 빈 칸은 인접 월의 실제 날짜로 채운다(흐리게 표시).
+    final weeks = <List<DateTime>>[];
     for (var w = 0; w < weekCount; w++) {
-      final week = <DateTime?>[];
-      for (var d = 0; d < 7; d++) {
-        final cellIndex = w * 7 + d;
-        final dayNum = cellIndex - leadingBlanks + 1;
-        if (dayNum < 1 || dayNum > daysInMonth) {
-          week.add(null);
-        } else {
-          week.add(DateTime(month.year, month.month, dayNum));
-        }
-      }
-      weeks.add(week);
+      weeks.add(
+        List.generate(
+          7,
+          (d) =>
+              DateTime(month.year, month.month, w * 7 + d - leadingBlanks + 1),
+        ),
+      );
     }
 
     final today = DateUtils.dateOnly(DateTime.now());
@@ -54,6 +51,7 @@ class MonthGrid extends StatelessWidget {
           .map(
             (week) => Expanded(
               child: _WeekRow(
+                month: month,
                 weekDates: week,
                 events: events,
                 holidaysByDate: holidaysByDate,
@@ -69,7 +67,8 @@ class MonthGrid extends StatelessWidget {
 }
 
 class _WeekRow extends StatelessWidget {
-  final List<DateTime?> weekDates;
+  final DateTime month;
+  final List<DateTime> weekDates;
   final List<EventModel> events;
   final Map<DateTime, List<KoreanHoliday>> holidaysByDate;
   final DateTime selectedDay;
@@ -77,6 +76,7 @@ class _WeekRow extends StatelessWidget {
   final ValueChanged<DateTime> onDayTap;
 
   const _WeekRow({
+    required this.month,
     required this.weekDates,
     required this.events,
     required this.holidaysByDate,
@@ -85,17 +85,20 @@ class _WeekRow extends StatelessWidget {
     required this.onDayTap,
   });
 
+  bool _isOutsideDay(DateTime date) =>
+      date.month != month.month || date.year != month.year;
+
+  /// 막대가 이번 달 칸에 한 칸도 걸치지 않는지
+  bool _isBarOutside(_BarPlacement p) {
+    for (var col = p.startCol; col <= p.endCol; col++) {
+      if (!_isOutsideDay(weekDates[col])) return false;
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 이 주(week)의 실제 달력 날짜 범위 (빈 칸도 명목상 날짜로 채워 계산)
-    final firstNonNull = weekDates.firstWhere((d) => d != null)!;
-    final weekStart = firstNonNull.subtract(
-      Duration(days: weekDates.indexWhere((d) => d != null)),
-    );
-    final weekDateKeys = List.generate(
-      7,
-      (i) => weekStart.add(Duration(days: i)),
-    );
+    final weekDateKeys = weekDates;
 
     // 여러 날에 걸친 일정 -> 레인 배정
     final multiDay =
@@ -159,8 +162,8 @@ class _WeekRow extends StatelessWidget {
       builder: (context, constraints) {
         final colWidth = constraints.maxWidth / 7;
         final barsAreaHeight = laneCount * _laneHeight;
-        final hasHoliday = weekDates.whereType<DateTime>().any(
-          (date) => holidaysByDate.containsKey(date),
+        final hasHoliday = weekDates.any(
+          (date) => !_isOutsideDay(date) && holidaysByDate.containsKey(date),
         );
         final headerHeight = hasHoliday ? 34.0 : 22.0;
         final remainingHeight =
@@ -175,20 +178,22 @@ class _WeekRow extends StatelessWidget {
             Row(
               children: List.generate(7, (col) {
                 final date = weekDates[col];
+                final isOutside = _isOutsideDay(date);
                 return Expanded(
                   child: _DayCell(
                     date: date,
                     weekdayIndex: col,
-                    isSelected: date != null && isSameDay(date, selectedDay),
-                    isToday: date != null && isSameDay(date, today),
-                    holidayName: date == null
+                    isOutside: isOutside,
+                    isSelected: !isOutside && isSameDay(date, selectedDay),
+                    isToday: !isOutside && isSameDay(date, today),
+                    holidayName: isOutside
                         ? null
                         : koreanHolidayNameForDate(holidaysByDate, date),
                     headerHeight: headerHeight,
                     topPadding: barsAreaHeight,
-                    events: date == null ? const [] : singleByCol[col],
+                    events: singleByCol[col],
                     maxVisible: maxSingleRows < 0 ? 0 : maxSingleRows,
-                    onTap: date == null ? null : () => onDayTap(date),
+                    onTap: isOutside ? null : () => onDayTap(date),
                   ),
                 );
               }),
@@ -200,23 +205,33 @@ class _WeekRow extends StatelessWidget {
                 width:
                     (placement.endCol - placement.startCol + 1) * colWidth - 4,
                 height: _laneHeight - 2,
-                child: GestureDetector(
-                  onTap: () =>
-                      onDayTap(calendarDateKey(placement.event.startDateTime)),
-                  child: Container(
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: placement.event.colorValue,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      placement.event.icon != null
-                          ? '${placement.event.icon} ${placement.event.title}'
-                          : placement.event.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                // 이번 달 칸에 전혀 걸치지 않는 막대만 흐리게 (걸치는 막대는 이어 보이게)
+                child: Opacity(
+                  opacity: _isBarOutside(placement) ? 0.35 : 1,
+                  child: GestureDetector(
+                    onTap: _isBarOutside(placement)
+                        ? null
+                        : () => onDayTap(
+                            calendarDateKey(placement.event.startDateTime),
+                          ),
+                    child: Container(
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: placement.event.colorValue,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        placement.event.icon != null
+                            ? '${placement.event.icon} ${placement.event.title}'
+                            : placement.event.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -242,8 +257,9 @@ class _BarPlacement {
 }
 
 class _DayCell extends StatelessWidget {
-  final DateTime? date;
+  final DateTime date;
   final int weekdayIndex; // 0=Sun .. 6=Sat
+  final bool isOutside; // 인접 월 날짜 — 흐리게, 탭 불가
   final bool isSelected;
   final bool isToday;
   final String? holidayName;
@@ -256,6 +272,7 @@ class _DayCell extends StatelessWidget {
   const _DayCell({
     required this.date,
     required this.weekdayIndex,
+    required this.isOutside,
     required this.isSelected,
     required this.isToday,
     required this.holidayName,
@@ -267,22 +284,19 @@ class _DayCell extends StatelessWidget {
   });
 
   Color _numberColor(BuildContext context) {
-    if (holidayName != null) return Colors.red[400]!;
-    if (weekdayIndex == 0) return Colors.red[400]!;
-    if (weekdayIndex == 6) return Colors.blue[400]!;
-    return Theme.of(context).colorScheme.onSurface;
+    final Color base;
+    if (holidayName != null || weekdayIndex == 0) {
+      base = Colors.red[400]!;
+    } else if (weekdayIndex == 6) {
+      base = Colors.blue[400]!;
+    } else {
+      base = Theme.of(context).colorScheme.onSurface;
+    }
+    return isOutside ? base.withValues(alpha: 0.35) : base;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (date == null) {
-      return Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade200, width: 0.5),
-        ),
-      );
-    }
-
     final overflowCount = events.length - maxVisible;
     final visibleEvents = events.take(maxVisible < 0 ? 0 : maxVisible);
 
@@ -317,7 +331,7 @@ class _DayCell extends StatelessWidget {
                             )
                           : null,
                       child: Text(
-                        '${date!.day}',
+                        '${date.day}',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -344,44 +358,52 @@ class _DayCell extends StatelessWidget {
               ),
               SizedBox(height: topPadding),
               ...visibleEvents.map(
-                (e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 1),
-                  child: Row(
-                    children: [
-                      if (e.icon != null)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 2),
+                (e) => Opacity(
+                  opacity: isOutside ? 0.35 : 1,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 1),
+                    child: Row(
+                      children: [
+                        if (e.icon != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 2),
+                            child: Text(
+                              e.icon!,
+                              style: const TextStyle(fontSize: 8),
+                            ),
+                          )
+                        else
+                          Container(
+                            width: 5,
+                            height: 5,
+                            margin: const EdgeInsets.only(right: 3),
+                            decoration: BoxDecoration(
+                              color: e.colorValue,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        Expanded(
                           child: Text(
-                            e.icon!,
-                            style: const TextStyle(fontSize: 8),
-                          ),
-                        )
-                      else
-                        Container(
-                          width: 5,
-                          height: 5,
-                          margin: const EdgeInsets.only(right: 3),
-                          decoration: BoxDecoration(
-                            color: e.colorValue,
-                            shape: BoxShape.circle,
+                            e.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 9.5),
                           ),
                         ),
-                      Expanded(
-                        child: Text(
-                          e.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 9.5),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
               if (overflowCount > 0)
                 Text(
                   '+$overflowCount',
-                  style: TextStyle(fontSize: 9, color: Colors.grey[500]),
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: Colors.grey[500]!.withValues(
+                      alpha: isOutside ? 0.35 : 1,
+                    ),
+                  ),
                 ),
             ],
           ),

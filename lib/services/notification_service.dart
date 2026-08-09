@@ -7,6 +7,13 @@ import '../models/event_model.dart';
 import '../utils/briefing_utils.dart';
 import '../utils/event_utils.dart';
 
+/// 실제로 OS에 예약된 알람 1건 (기록용)
+class ScheduledAlarm {
+  final DateTime occurrenceStart;
+  final DateTime alarmAt;
+  const ScheduledAlarm({required this.occurrenceStart, required this.alarmAt});
+}
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
   factory NotificationService() => _instance;
@@ -39,8 +46,9 @@ class NotificationService {
     // 알림 탭 시 처리 — 향후 특정 이벤트 화면으로 라우팅 가능
   }
 
-  Future<void> scheduleAlarm(EventModel event) async {
-    if (!_supported || !event.hasAlarm) return;
+  /// 예약에 성공하면 그 회차 정보를 돌려준다(기록용). 예약 안 했으면 null.
+  Future<ScheduledAlarm?> scheduleAlarm(EventModel event) async {
+    if (!_supported || !event.hasAlarm) return null;
 
     DateTime? occurrenceStart;
     if (event.repeat == RepeatRule.none) {
@@ -55,34 +63,43 @@ class NotificationService {
         occurrenceStart = nextOccurrence(event, occurrenceStart);
       }
     }
-    if (occurrenceStart == null) return;
+    if (occurrenceStart == null) return null;
 
     final alarmTime = occurrenceStart.subtract(
       Duration(minutes: event.alarmMinutesBefore),
     );
-    if (alarmTime.isBefore(DateTime.now())) return;
+    if (alarmTime.isBefore(DateTime.now())) return null;
 
     final body = event.alarmMinutesBefore == 0
         ? '일정이 시작되었습니다'
         : '${event.alarmMinutesBefore}분 후 시작';
 
-    await _plugin.zonedSchedule(
-      event.id.hashCode.abs(),
-      event.title,
-      body,
-      tz.TZDateTime.from(alarmTime, tz.local),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'coy_calendar_channel',
-          '캘린더 알림',
-          channelDescription: '일정 알림',
-          importance: Importance.high,
-          priority: Priority.high,
+    try {
+      await _plugin.zonedSchedule(
+        event.id.hashCode.abs(),
+        event.title,
+        body,
+        tz.TZDateTime.from(alarmTime, tz.local),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'coy_calendar_channel',
+            '캘린더 알림',
+            channelDescription: '일정 알림',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
         ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (_) {
+      return null; // 권한 없음 등 — 예약 실패는 기록하지 않는다
+    }
+
+    return ScheduledAlarm(
+      occurrenceStart: occurrenceStart,
+      alarmAt: alarmTime,
     );
   }
 

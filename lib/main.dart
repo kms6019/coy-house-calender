@@ -18,10 +18,27 @@ import 'services/samsung_calendar_sync_service.dart';
 import 'services/widget_service.dart';
 import 'theme/app_theme.dart';
 
+/// 로그인 uid. 백그라운드 아이솔레이트에서는 Auth 복원 전이라 [currentUser]가
+/// 아직 null일 수 있으므로 첫 authStateChanges 방출까지 기다린다.
+Future<String?> _currentUid() async {
+  final auth = FirebaseAuth.instance;
+  final uid = auth.currentUser?.uid;
+  if (uid != null) return uid;
+  try {
+    final user = await auth
+        .authStateChanges()
+        .firstWhere((u) => u != null)
+        .timeout(const Duration(seconds: 5));
+    return user?.uid;
+  } catch (_) {
+    return null; // 복원 실패/미로그인
+  }
+}
+
 Future<void> _recordNotificationHistory(RemoteMessage message) async {
   final entry = NotificationHistoryEntry.fromFcmData(message.data);
   if (entry == null) return;
-  final uid = FirebaseAuth.instance.currentUser?.uid;
+  final uid = await _currentUid();
   if (uid == null) return;
   try {
     await NotificationHistoryService().record(uid, entry);
@@ -38,7 +55,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // 상대 일정 변경 푸시 → 앱 안 열어도 삼성캘린더/위젯 동기화
   if (message.data['type'] != 'event_sync') return;
   try {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = await _currentUid();
     if (uid == null) return;
     final db = FirebaseFirestore.instance;
     final userDoc = await db.collection('users').doc(uid).get();
