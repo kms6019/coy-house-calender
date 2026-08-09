@@ -219,7 +219,7 @@ class _WeekRow extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
                         color: placement.event.colorValue,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         placement.event.icon != null
@@ -227,9 +227,18 @@ class _WeekRow extends StatelessWidget {
                             : placement.event.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        // 대비 상대는 테마 배경이 아니라 막대 자신의 색이다.
+                        // surface/onSurface를 쓰면 다크모드에서 뒤집혀 안 보인다.
+                        style: TextStyle(
+                          color:
+                              ThemeData.estimateBrightnessForColor(
+                                    placement.event.colorValue,
+                                  ) ==
+                                  Brightness.dark
+                              ? Colors.white
+                              : Colors.black87,
                           fontSize: 10,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -284,31 +293,38 @@ class _DayCell extends StatelessWidget {
   });
 
   Color _numberColor(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final Color base;
     if (holidayName != null || weekdayIndex == 0) {
-      base = Colors.red[400]!;
+      base = colors.error;
     } else if (weekdayIndex == 6) {
-      base = Colors.blue[400]!;
+      base = colors.primary;
     } else {
-      base = Theme.of(context).colorScheme.onSurface;
+      base = colors.onSurface;
     }
     return isOutside ? base.withValues(alpha: 0.35) : base;
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final overflowCount = events.length - maxVisible;
     final visibleEvents = events.take(maxVisible < 0 ? 0 : maxVisible);
 
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade200, width: 0.5),
+          border: Border.all(
+            color: isSelected
+                ? colors.primary.withValues(alpha: 0.5)
+                : colors.outlineVariant.withValues(alpha: 0.48),
+            width: isSelected ? 1 : 0.5,
+          ),
           color: isSelected
-              ? Theme.of(
-                  context,
-                ).colorScheme.primaryContainer.withValues(alpha: 0.3)
+              ? colors.primaryContainer.withValues(alpha: 0.58)
               : null,
         ),
         child: Padding(
@@ -335,7 +351,9 @@ class _DayCell extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: isToday ? Colors.white : _numberColor(context),
+                          color: isToday
+                              ? colors.onPrimary
+                              : _numberColor(context),
                         ),
                       ),
                     ),
@@ -346,10 +364,10 @@ class _DayCell extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.red,
+                          style: TextStyle(
+                            color: colors.error,
                             fontSize: 7.5,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -387,7 +405,11 @@ class _DayCell extends StatelessWidget {
                             e.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 9.5),
+                            style: TextStyle(
+                              color: colors.onSurface,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -400,7 +422,7 @@ class _DayCell extends StatelessWidget {
                   '+$overflowCount',
                   style: TextStyle(
                     fontSize: 9,
-                    color: Colors.grey[500]!.withValues(
+                    color: colors.onSurfaceVariant.withValues(
                       alpha: isOutside ? 0.35 : 1,
                     ),
                   ),

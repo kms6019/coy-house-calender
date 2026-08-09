@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
-import '../../theme/app_theme.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -57,7 +56,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final email = _emailCtrl.text.trim();
       final password = _passwordCtrl.text;
@@ -76,89 +78,110 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(32),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(Icons.favorite, size: 64, color: kPrimaryPurple),
-                  const SizedBox(height: 8),
-                  Text(
-                    'CoyHouse Calendar',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 84,
+                        height: 84,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: colors.primaryContainer,
+                          borderRadius: BorderRadius.circular(28),
                         ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '우리 둘만의 캘린더',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
+                        child: Icon(
+                          Icons.favorite,
+                          size: 42,
+                          color: colors.onPrimaryContainer,
                         ),
-                  ),
-                  const SizedBox(height: 40),
-                  TextFormField(
-                    controller: _emailCtrl,
-                    decoration: const InputDecoration(
-                      labelText: '이메일',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.email_outlined),
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? '이메일을 입력하세요' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordCtrl,
-                    decoration: const InputDecoration(
-                      labelText: '비밀번호',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.lock_outline),
-                    ),
-                    obscureText: true,
-                    validator: (v) =>
-                        (v == null || v.length < 6) ? '비밀번호는 6자 이상이어야 합니다' : null,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _saveCredentials,
-                        onChanged: (v) => setState(() => _saveCredentials = v!),
-                        visualDensity: VisualDensity.compact,
                       ),
-                      const Text('로그인 정보 저장'),
-                    ],
-                  ),
-                  if (_error != null) ...[
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'CoyHouse Calendar',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '우리 둘만의 캘린더',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    TextFormField(
+                      controller: _emailCtrl,
+                      decoration: const InputDecoration(
+                        labelText: '이메일',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? '이메일을 입력하세요' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _passwordCtrl,
+                      decoration: const InputDecoration(
+                        labelText: '비밀번호',
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                      obscureText: true,
+                      validator: (v) => (v == null || v.length < 6)
+                          ? '비밀번호는 6자 이상이어야 합니다'
+                          : null,
+                    ),
                     const SizedBox(height: 4),
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _saveCredentials,
+                          onChanged: (v) =>
+                              setState(() => _saveCredentials = v!),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        const Text('로그인 정보 저장'),
+                      ],
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 4),
+                      Text(_error!, style: TextStyle(color: colors.error)),
+                    ],
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _loading ? null : _submit,
+                      child: _loading
+                          ? SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: colors.onPrimary,
+                              ),
+                            )
+                          : const Text('로그인'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () => context.push('/register'),
+                      child: const Text('계정이 없으신가요? 회원가입'),
+                    ),
                   ],
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: _loading ? null : _submit,
-                    child: _loading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('로그인'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () => context.push('/register'),
-                    child: const Text('계정이 없으신가요? 회원가입'),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
