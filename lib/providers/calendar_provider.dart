@@ -4,7 +4,7 @@ import '../models/event_model.dart';
 import '../models/couple_model.dart';
 import '../models/korean_holiday.dart';
 import '../models/wish_model.dart';
-import '../services/alarm_history_service.dart';
+import '../services/alarm_sync.dart';
 import '../services/firestore_service.dart';
 import '../services/korean_holiday_service.dart';
 import '../services/notification_service.dart';
@@ -72,26 +72,7 @@ final alarmSyncProvider = Provider<void>((ref) {
   final ns = NotificationService();
 
   // 예약과 동시에 기록을 남기고, 사라진 예약은 정리한다(알람 기록 탭의 원본).
-  Future<void> syncAlarms() async {
-    final history = AlarmHistoryService();
-    final keepIds = <String>{};
-    for (final event in events) {
-      await ns.cancelAlarm(event.id);
-      final scheduled = await ns.scheduleAlarm(event);
-      if (scheduled == null || uid == null) continue;
-      keepIds.add(alarmRecordId(event.id, scheduled.alarmAt));
-      await history.recordScheduled(
-        uid,
-        eventId: event.id,
-        title: event.title,
-        occurrenceStart: scheduled.occurrenceStart,
-        alarmAt: scheduled.alarmAt,
-      );
-    }
-    if (uid != null) await history.reconcile(uid, keepIds, DateTime.now());
-  }
-
-  syncAlarms();
+  syncAlarms(events, uid);
 
   final briefing = ref.watch(
     currentUserModelProvider.select(

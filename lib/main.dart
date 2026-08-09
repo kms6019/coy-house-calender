@@ -12,6 +12,7 @@ import 'models/anniversary_model.dart';
 import 'models/event_model.dart';
 import 'providers/auth_provider.dart' show currentUserModelProvider;
 import 'router/app_router.dart';
+import 'services/alarm_sync.dart';
 import 'services/notification_history_service.dart';
 import 'services/notification_service.dart';
 import 'services/samsung_calendar_sync_service.dart';
@@ -78,6 +79,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
     await SamsungCalendarSyncService().syncAll(events);
     await WidgetService.update(events, anniversaries: anniversaries);
+
+    // 상대가 올린 일정의 알람은 앱을 열어야만 예약되던 문제 → 푸시 받는 즉시 예약
+    await NotificationService().init(requestPermission: false);
+    await syncAlarms(events, uid);
   } catch (_) {
     // 백그라운드 동기화 실패는 조용히 무시 — 다음 앱 실행 때 따라잡음
   }

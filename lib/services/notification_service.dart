@@ -24,7 +24,8 @@ class NotificationService {
   // Windows는 flutter_local_notifications 스케줄링 미지원 → skip
   bool get _supported => !kIsWeb && !Platform.isWindows && !Platform.isMacOS && !Platform.isLinux;
 
-  Future<void> init() async {
+  /// [requestPermission]은 백그라운드 아이솔레이트에서 끈다 — 띄울 화면이 없다.
+  Future<void> init({bool requestPermission = true}) async {
     if (!_supported) return;
 
     tz.initializeTimeZones();
@@ -36,6 +37,7 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
+    if (!requestPermission) return;
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
