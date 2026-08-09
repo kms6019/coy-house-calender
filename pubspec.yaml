@@ -2,7 +2,8 @@ name: coy_house_calender
 description: "부부 공유 스마트 캘린더 - CoyHouseCalender"
 publish_to: 'none'
 
-version: 1.0.0+1
+# buildNumber(+뒤 숫자)로 업데이트 여부를 판단한다. 배포할 때마다 올릴 것.
+version: 1.0.1+2
 
 environment:
   sdk: ^3.11.4
@@ -43,6 +44,11 @@ dependencies:
   firebase_storage: ^12.4.10
   image_picker: ^1.2.3
   http: ^1.6.0
+
+  # 앱 내 업데이트 (사이드로딩 배포라 Play 인앱 업데이트를 못 씀)
+  package_info_plus: ^8.1.2
+  path_provider: ^2.1.5
+  open_filex: ^4.7.0
 
 dev_dependencies:
   flutter_test:

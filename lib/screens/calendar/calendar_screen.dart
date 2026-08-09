@@ -8,17 +8,32 @@ import '../../theme/design_tokens.dart';
 import '../../utils/dday_utils.dart';
 import '../../utils/event_utils.dart';
 import '../../widgets/app_surface.dart';
+import '../../widgets/update_prompt.dart';
 import 'agenda_list.dart';
 import 'anniversary_chips.dart';
 import 'month_grid.dart';
 
 const _weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
-class CalendarScreen extends ConsumerWidget {
+class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
+}
+
+class _CalendarScreenState extends ConsumerState<CalendarScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // 앱 실행 후 첫 캘린더 진입에서 한 번만 새 버전을 확인한다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) maybePromptUpdate(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedDay = ref.watch(selectedDateProvider);
     final focusedDay = ref.watch(focusedDateProvider);
     final eventsAsync = ref.watch(eventsStreamProvider);
