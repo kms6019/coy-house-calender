@@ -5,15 +5,14 @@ import 'package:intl/intl.dart';
 import '../../models/event_model.dart';
 import '../../models/korean_holiday.dart';
 import '../../providers/calendar_provider.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/dday_utils.dart';
 import '../../utils/event_utils.dart';
+import '../../widgets/app_surface.dart';
 import '../event/event_list_tile.dart';
 import 'anniversary_chips.dart';
 import 'month_grid.dart';
 
-const _purple = kPrimaryPurple;
-const _weekdayLabels = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const _weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
 class CalendarScreen extends ConsumerWidget {
   const CalendarScreen({super.key});
@@ -49,78 +48,101 @@ class CalendarScreen extends ConsumerWidget {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
+        showDragHandle: true,
+        useSafeArea: true,
         builder: (sheetContext) => _DaySheet(day: day),
       );
     }
 
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              color: _purple,
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.primaryContainer,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(30),
+                ),
+              ),
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
                     child: Row(
                       children: [
                         coupleAsync.when(
-                          data: (couple) => Padding(
-                            padding: const EdgeInsets.only(left: 8),
+                          data: (couple) => Container(
+                            width: 40,
+                            height: 40,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: colors.surface.withValues(alpha: 0.66),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             child: Icon(
                               couple?.isLinked == true
                                   ? Icons.favorite
                                   : Icons.favorite_border,
-                              color: Colors.white,
-                              size: 18,
+                              color: colors.primary,
+                              size: 20,
                             ),
                           ),
-                          loading: () => const SizedBox(width: 34),
-                          error: (err, st) => const SizedBox(width: 34),
+                          loading: () => const SizedBox(width: 40, height: 40),
+                          error: (err, st) =>
+                              const SizedBox(width: 40, height: 40),
                         ),
                         const Spacer(),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.chevron_left,
-                            color: Colors.white,
-                          ),
+                        IconButton.filledTonal(
+                          tooltip: '이전 달',
+                          icon: const Icon(Icons.chevron_left),
                           onPressed: () => changeMonth(-1),
                         ),
-                        GestureDetector(
+                        InkWell(
                           onTap: goToToday,
-                          child: Text(
-                            DateFormat('yyyy.MM').format(focusedDay),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
+                          borderRadius: BorderRadius.circular(18),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 9,
                             ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.chevron_right,
-                            color: Colors.white,
-                          ),
-                          onPressed: () => changeMonth(1),
-                        ),
-                        const Spacer(),
-                        if (eventsAsync.isLoading)
-                          const Padding(
-                            padding: EdgeInsets.only(right: 8),
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(
-                                  Colors.white,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              child: Text(
+                                DateFormat('yyyy년 M월').format(focusedDay),
+                                key: ValueKey(
+                                  '${focusedDay.year}-${focusedDay.month}',
+                                ),
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  color: colors.onPrimaryContainer,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
                           ),
+                        ),
+                        IconButton.filledTonal(
+                          tooltip: '다음 달',
+                          icon: const Icon(Icons.chevron_right),
+                          onPressed: () => changeMonth(1),
+                        ),
+                        const Spacer(),
+                        SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: eventsAsync.isLoading
+                              ? Padding(
+                                  padding: const EdgeInsets.all(11),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: colors.primary,
+                                  ),
+                                )
+                              : null,
+                        ),
                       ],
                     ),
                   ),
@@ -128,7 +150,7 @@ class CalendarScreen extends ConsumerWidget {
                     data: (couple) => couple == null
                         ? const SizedBox.shrink()
                         : Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.only(bottom: 8),
                             child: AnniversaryChips(
                               anniversaries: couple.anniversaries,
                             ),
@@ -138,20 +160,20 @@ class CalendarScreen extends ConsumerWidget {
                   Row(
                     children: List.generate(7, (i) {
                       final color = i == 0
-                          ? Colors.red[100]
+                          ? colors.error
                           : i == 6
-                          ? Colors.blue[100]
-                          : Colors.white;
+                          ? colors.primary
+                          : colors.onPrimaryContainer;
                       return Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.only(bottom: 10),
                           child: Text(
                             _weekdayLabels[i],
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: color,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -163,26 +185,32 @@ class CalendarScreen extends ConsumerWidget {
             ),
             Expanded(
               child: eventsAsync.hasError
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 48,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 8),
-                          const Text('일정을 불러오지 못했습니다.'),
-                          TextButton(
-                            onPressed: () =>
-                                ref.invalidate(eventsStreamProvider),
-                            child: const Text('다시 시도'),
-                          ),
-                        ],
+                  ? AppEmptyState(
+                      icon: Icons.cloud_off_outlined,
+                      title: '일정을 불러오지 못했습니다',
+                      message: '잠시 후 다시 시도해 주세요.',
+                      action: FilledButton.tonalIcon(
+                        onPressed: () => ref.invalidate(eventsStreamProvider),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('다시 시도'),
                       ),
                     )
-                  : _MonthPager(onDayTap: openDay),
+                  : Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: colors.outlineVariant.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: _MonthPager(onDayTap: openDay),
+                        ),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -225,40 +253,60 @@ class _FabMenuState extends State<_FabMenu>
   }
 
   Widget _item(int index, IconData icon, String label, VoidCallback onTap) {
+    final colors = Theme.of(context).colorScheme;
     final anim = CurvedAnimation(
       parent: _controller,
       curve: Interval(0.1 * index, 1, curve: Curves.easeOutBack),
     );
-    return ScaleTransition(
-      scale: anim,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(12),
+    return FadeTransition(
+      opacity: anim,
+      child: ScaleTransition(
+        scale: anim,
+        alignment: Alignment.bottomRight,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.inverseSurface,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.shadow.withValues(alpha: 0.12),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: colors.onInverseSurface,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-              child: Text(
-                label,
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+              const SizedBox(width: 10),
+              FloatingActionButton.small(
+                heroTag: 'fab_$label',
+                backgroundColor: colors.secondaryContainer,
+                foregroundColor: colors.onSecondaryContainer,
+                elevation: 2,
+                onPressed: () {
+                  _toggle();
+                  onTap();
+                },
+                child: Icon(icon),
               ),
-            ),
-            const SizedBox(width: 10),
-            FloatingActionButton.small(
-              heroTag: 'fab_$label',
-              backgroundColor: Colors.white,
-              foregroundColor: _purple,
-              onPressed: () {
-                _toggle();
-                onTap();
-              },
-              child: Icon(icon),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -271,23 +319,34 @@ class _FabMenuState extends State<_FabMenu>
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         if (_open || _controller.isAnimating) ...[
-          _item(4, Icons.settings_outlined, '설정',
-              () => context.push('/settings')),
-          _item(3, Icons.notifications_outlined, '알림 기록',
-              () => context.push('/settings/notifications')),
+          _item(
+            4,
+            Icons.settings_outlined,
+            '설정',
+            () => context.push('/settings'),
+          ),
+          _item(
+            3,
+            Icons.notifications_outlined,
+            '알림 기록',
+            () => context.push('/settings/notifications'),
+          ),
           _item(2, Icons.search, '검색', () => context.push('/search')),
           _item(1, Icons.today, '오늘', widget.onToday),
-          _item(0, Icons.edit_calendar, '일정 추가',
-              () => context.push('/event/new', extra: widget.selectedDay)),
+          _item(
+            0,
+            Icons.edit_calendar,
+            '일정 추가',
+            () => context.push('/event/new', extra: widget.selectedDay),
+          ),
         ],
         FloatingActionButton(
           heroTag: 'fab_main',
-          backgroundColor: _purple,
           onPressed: _toggle,
           child: AnimatedRotation(
             turns: _open ? 0.125 : 0,
             duration: const Duration(milliseconds: 220),
-            child: const Icon(Icons.add, color: Colors.white, size: 30),
+            child: const Icon(Icons.add, size: 30),
           ),
         ),
       ],
@@ -400,64 +459,100 @@ class _DaySheet extends ConsumerWidget {
       groupKoreanHolidaysByDate(holidays),
       day,
     );
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 12),
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+      ),
+      child: AppPageBody(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Text(
-                    DateFormat('M월 d일 (E)', 'ko_KR').format(day),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormat('M월 d일 E요일', 'ko_KR').format(day),
+                        style: theme.textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        events.isEmpty ? '비어 있는 하루예요' : '일정 ${events.length}개',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      context.push('/event/new', extra: day);
-                    },
-                  ),
-                ],
-              ),
+                ),
+                IconButton.filled(
+                  tooltip: '일정 추가',
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    context.push('/event/new', extra: day);
+                  },
+                ),
+              ],
             ),
-            const Divider(height: 1),
-            if (holidayName != null)
-              ListTile(
-                dense: true,
-                leading: const Icon(Icons.flag_outlined, color: Colors.red),
-                title: Text(
-                  holidayName,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.w600,
-                  ),
+            const SizedBox(height: 18),
+            if (holidayName != null) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: colors.errorContainer,
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                subtitle: const Text('대한민국 공휴일'),
+                child: Row(
+                  children: [
+                    Icon(Icons.flag_outlined, color: colors.onErrorContainer),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            holidayName,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: colors.onErrorContainer,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            '대한민국 공휴일',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onErrorContainer,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(height: 10),
+            ],
             if (events.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 32),
-                child: Text(
-                  '일정이 없습니다',
-                  style: TextStyle(color: Colors.grey[400]),
-                ),
+              const AppEmptyState(
+                icon: Icons.event_available_outlined,
+                title: '일정이 없습니다',
+                message: '둘만의 새 일정을 추가해 보세요.',
               )
             else
               Flexible(
-                child: ListView.builder(
+                child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: events.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, i) => EventListTile(event: events[i]),
                 ),
               ),
-            const SizedBox(height: 12),
           ],
         ),
       ),

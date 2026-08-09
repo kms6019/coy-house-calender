@@ -11,255 +11,292 @@ import '../../services/samsung_calendar_sync_service.dart';
 import '../../services/widget_service.dart';
 import '../../theme/couple_palette.dart';
 import '../../theme/app_theme.dart' show kPrimaryPurple;
+import '../../widgets/app_surface.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final userAsync = ref.watch(currentUserModelProvider);
     final coupleAsync = ref.watch(coupleStreamProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
-      body: ListView(
-        children: [
-          // 내 계정 정보
-          userAsync.when(
-            data: (user) => ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: Text(
-                  user?.displayName.isNotEmpty == true
-                      ? user!.displayName[0].toUpperCase()
-                      : '?',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
+      body: AppPageBody(
+        child: ListView(
+          children: [
+            Text('우리에게 맞게', style: theme.textTheme.headlineSmall),
+            const SizedBox(height: 4),
+            Text(
+              '둘이 함께 쓰는 달력을 편안하게 설정해 보세요.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 22),
+            _SettingsGroup(
+              title: '계정과 연결',
+              icon: Icons.people_alt_outlined,
+              children: [
+                userAsync.when(
+                  data: (user) => ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: colors.primaryContainer,
+                      child: Text(
+                        user?.displayName.isNotEmpty == true
+                            ? user!.displayName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          color: colors.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      user?.displayName ?? '-',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(user?.email ?? '-'),
                   ),
+                  loading: () => const ListTile(
+                    leading: CircleAvatar(child: Icon(Icons.person)),
+                    title: Text('불러오는 중...'),
+                  ),
+                  error: (err, st) => const SizedBox.shrink(),
                 ),
-              ),
-              title: Text(
-                user?.displayName ?? '-',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(user?.email ?? '-'),
-            ),
-            loading: () => const ListTile(
-              leading: CircleAvatar(child: Icon(Icons.person)),
-              title: Text('불러오는 중...'),
-            ),
-            error: (err, st) => const SizedBox.shrink(),
-          ),
-          const Divider(),
-
-          // 파트너 연결 상태
-          coupleAsync.when(
-            data: (couple) {
-              if (couple == null) {
-                return ListTile(
-                  leading: const Icon(
-                    Icons.favorite_border,
-                    color: Colors.grey,
-                  ),
-                  title: const Text('파트너 연결'),
-                  subtitle: const Text('아직 파트너와 연결되지 않았습니다'),
-                  trailing: TextButton(
-                    onPressed: () => context.push('/invite'),
-                    child: const Text('연결하기'),
-                  ),
-                );
-              }
-              if (!couple.isLinked) {
-                // 커플 생성됨·파트너 대기 중: /invite는 coupleId 있으면 튕기므로
-                // 초대 코드 표시 + 상대 코드 입력을 여기서 처리한다
-                return Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(
-                        Icons.favorite_border,
-                        color: Colors.grey,
-                      ),
-                      title: const Text('파트너 연결 대기 중'),
-                      subtitle: Text(
-                        '초대 코드: ${couple.inviteCode}\n파트너가 이 코드를 입력하면 연결됩니다',
-                      ),
-                      isThreeLine: true,
-                      trailing: IconButton(
-                        icon: const Icon(Icons.copy, size: 20),
-                        onPressed: () {
-                          Clipboard.setData(
-                            ClipboardData(text: couple.inviteCode),
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('코드가 복사되었습니다')),
-                          );
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 72, bottom: 8),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () => _enterPartnerCode(context, ref),
-                          icon: const Icon(Icons.keyboard, size: 18),
-                          label: const Text('파트너 코드 입력하기'),
+                coupleAsync.when(
+                  data: (couple) {
+                    if (couple == null) {
+                      return ListTile(
+                        leading: Icon(
+                          Icons.favorite_border,
+                          color: colors.onSurfaceVariant,
                         ),
-                      ),
-                    ),
-                  ],
-                );
-              }
-              // 연결됨 상태
-              final myUid = ref.read(authStateProvider).valueOrNull?.uid;
-              final isOwner = couple.ownerUid == myUid;
-              return Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.favorite, color: Colors.pink),
-                    title: const Text('파트너 연결'),
-                    subtitle: const Text('연결됨'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GestureDetector(
-                          onTap: myUid == null
-                              ? null
-                              : () => _pickMyColor(context, ref, couple, myUid),
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: isOwner
-                                  ? couple.ownerColorValue
-                                  : couple.partnerColorValue,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.edit,
-                              size: 12,
-                              color: Colors.white70,
-                            ),
-                          ),
+                        title: const Text('파트너 연결'),
+                        subtitle: const Text('아직 파트너와 연결되지 않았습니다'),
+                        trailing: TextButton(
+                          onPressed: () => context.push('/invite'),
+                          child: const Text('연결하기'),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isOwner ? '방장' : '파트너',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // 초대 코드 표시 (방장만)
-                  if (isOwner && !couple.isLinked == false)
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: 72,
-                        right: 16,
-                        bottom: 8,
-                      ),
-                      child: Row(
+                      );
+                    }
+                    if (!couple.isLinked) {
+                      return Column(
                         children: [
-                          Text(
-                            '초대 코드: ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
+                          ListTile(
+                            leading: Icon(
+                              Icons.favorite_border,
+                              color: colors.onSurfaceVariant,
+                            ),
+                            title: const Text('파트너 연결 대기 중'),
+                            subtitle: Text(
+                              '초대 코드: ${couple.inviteCode}\n파트너가 이 코드를 입력하면 연결됩니다',
+                            ),
+                            isThreeLine: true,
+                            trailing: IconButton(
+                              tooltip: '초대 코드 복사',
+                              icon: const Icon(Icons.copy, size: 20),
+                              onPressed: () {
+                                Clipboard.setData(
+                                  ClipboardData(text: couple.inviteCode),
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('코드가 복사되었습니다')),
+                                );
+                              },
                             ),
                           ),
-                          Text(
-                            couple.inviteCode,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
+                          Padding(
+                            padding: const EdgeInsets.only(left: 64, bottom: 8),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                onPressed: () =>
+                                    _enterPartnerCode(context, ref),
+                                icon: const Icon(Icons.keyboard, size: 18),
+                                label: const Text('파트너 코드 입력하기'),
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                ],
-              );
-            },
-            loading: () => const ListTile(
-              leading: Icon(Icons.favorite_border),
-              title: Text('불러오는 중...'),
+                      );
+                    }
+                    final myUid = ref.read(authStateProvider).valueOrNull?.uid;
+                    final isOwner = couple.ownerUid == myUid;
+                    final myColor = isOwner
+                        ? couple.ownerColorValue
+                        : couple.partnerColorValue;
+                    final colorForeground =
+                        ThemeData.estimateBrightnessForColor(myColor) ==
+                            Brightness.dark
+                        ? colors.surface
+                        : colors.onSurface;
+                    return Column(
+                      children: [
+                        ListTile(
+                          leading: Icon(Icons.favorite, color: colors.primary),
+                          title: const Text('파트너 연결'),
+                          subtitle: const Text('두 사람의 캘린더가 연결되어 있어요'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              InkWell(
+                                onTap: myUid == null
+                                    ? null
+                                    : () => _pickMyColor(
+                                        context,
+                                        ref,
+                                        couple,
+                                        myUid,
+                                      ),
+                                customBorder: const CircleBorder(),
+                                child: Container(
+                                  width: 30,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    color: myColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.edit,
+                                    size: 14,
+                                    color: colorForeground,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                isOwner ? '방장' : '파트너',
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isOwner)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(64, 0, 16, 12),
+                            child: Row(
+                              children: [
+                                Text(
+                                  '초대 코드',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  couple.inviteCode,
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                  loading: () => const ListTile(
+                    leading: Icon(Icons.favorite_border),
+                    title: Text('불러오는 중...'),
+                  ),
+                  error: (err, st) => const SizedBox.shrink(),
+                ),
+              ],
             ),
-            error: (err, st) => const SizedBox.shrink(),
-          ),
-          const Divider(),
-
-          // 기념일 관리
-          ListTile(
-            leading: const Icon(Icons.cake_outlined),
-            title: const Text('기념일 관리'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/anniversaries'),
-          ),
-          const Divider(),
-
-          // 위시리스트
-          ListTile(
-            leading: const Icon(Icons.checklist),
-            title: const Text('위시리스트'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/wishlist'),
-          ),
-          const Divider(),
-
-          // 테마
-          const _ThemeSection(),
-          const Divider(),
-
-          // 월간 리포트
-          ListTile(
-            leading: const Icon(Icons.bar_chart_outlined),
-            title: const Text('월간 리포트'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/report'),
-          ),
-          const Divider(),
-
-          // 기기 캘린더 가져오기
-          ListTile(
-            leading: const Icon(Icons.download_outlined),
-            title: const Text('기기 캘린더 가져오기'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/import'),
-          ),
-          const Divider(),
-
-          // 삼성캘린더 수동 동기화
-          const _ManualSyncSection(),
-          const Divider(),
-
-          // 대한민국 공휴일
-          const _HolidaySection(),
-          const Divider(),
-
-          // 아침 브리핑
-          const _BriefingSection(),
-          const Divider(),
-
-          // 앱 정보
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('버전'),
-            trailing: Text('1.0.0', style: TextStyle(color: Colors.grey)),
-          ),
-          const Divider(),
-
-          // 로그아웃
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('로그아웃', style: TextStyle(color: Colors.red)),
-            onTap: () => _confirmLogout(context, ref),
-          ),
-        ],
+            const SizedBox(height: 18),
+            _SettingsGroup(
+              title: '함께 쓰기',
+              icon: Icons.favorite_outline,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.cake_outlined),
+                  title: const Text('기념일 관리'),
+                  subtitle: const Text('D-day와 매년 돌아오는 날'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/settings/anniversaries'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.checklist),
+                  title: const Text('위시리스트'),
+                  subtitle: const Text('함께하고 싶은 데이트 모음'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/wishlist'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.bar_chart_outlined),
+                  title: const Text('월간 리포트'),
+                  subtitle: const Text('이번 달 둘의 일정 돌아보기'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/report'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const _SettingsGroup(
+              title: '화면과 테마',
+              icon: Icons.palette_outlined,
+              children: [_ThemeSection()],
+            ),
+            const SizedBox(height: 18),
+            _SettingsGroup(
+              title: '캘린더 연동',
+              icon: Icons.sync_alt,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.download_outlined),
+                  title: const Text('기기 캘린더 가져오기'),
+                  subtitle: const Text('앞으로 90일의 일정을 선택해 가져오기'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/settings/import'),
+                ),
+                const _ManualSyncSection(),
+                const _HolidaySection(),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _SettingsGroup(
+              title: '알림',
+              icon: Icons.notifications_outlined,
+              children: [
+                const _BriefingSection(),
+                ListTile(
+                  leading: const Icon(Icons.history),
+                  title: const Text('알림 기록'),
+                  subtitle: const Text('일정 알람과 파트너 알림 모아보기'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/settings/notifications'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _SettingsGroup(
+              title: '앱 정보',
+              icon: Icons.info_outline,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.apps_outlined),
+                  title: const Text('버전'),
+                  trailing: Text(
+                    '1.0.0',
+                    style: TextStyle(color: colors.onSurfaceVariant),
+                  ),
+                ),
+                ListTile(
+                  leading: Icon(Icons.logout, color: colors.error),
+                  title: Text('로그아웃', style: TextStyle(color: colors.error)),
+                  onTap: () => _confirmLogout(context, ref),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -385,9 +422,13 @@ class SettingsScreen extends ConsumerWidget {
                     child: isMine
                         ? Icon(
                             Icons.check,
-                            color: Color(c).computeLuminance() > 0.5
-                                ? Colors.black54
-                                : Colors.white,
+                            color:
+                                ThemeData.estimateBrightnessForColor(
+                                      Color(c),
+                                    ) ==
+                                    Brightness.dark
+                                ? Theme.of(ctx).colorScheme.surface
+                                : Theme.of(ctx).colorScheme.onSurface,
                           )
                         : null,
                   ),
@@ -445,10 +486,7 @@ class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
         );
         if (s.firstError != null) msg.write('\n${s.firstError}');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$msg'),
-            duration: const Duration(seconds: 8),
-          ),
+          SnackBar(content: Text('$msg'), duration: const Duration(seconds: 8)),
         );
       }
     } catch (e) {
@@ -484,7 +522,11 @@ class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
 class _ThemeSection extends ConsumerWidget {
   const _ThemeSection();
 
-  Future<void> _pickColor(BuildContext context, WidgetRef ref, int? current) async {
+  Future<void> _pickColor(
+    BuildContext context,
+    WidgetRef ref,
+    int? current,
+  ) async {
     final picked = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -502,13 +544,18 @@ class _ThemeSection extends ConsumerWidget {
                 onTap: () => Navigator.pop(ctx, c),
                 customBorder: const CircleBorder(),
                 child: Container(
-                  decoration: BoxDecoration(color: Color(c), shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: Color(c),
+                    shape: BoxShape.circle,
+                  ),
                   child: isMine
                       ? Icon(
                           Icons.check,
-                          color: Color(c).computeLuminance() > 0.5
-                              ? Colors.black54
-                              : Colors.white,
+                          color:
+                              ThemeData.estimateBrightnessForColor(Color(c)) ==
+                                  Brightness.dark
+                              ? Theme.of(ctx).colorScheme.surface
+                              : Theme.of(ctx).colorScheme.onSurface,
                         )
                       : null,
                 ),
@@ -517,16 +564,19 @@ class _ThemeSection extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
         ],
       ),
     );
     if (picked == null) return;
     final uid = ref.read(authStateProvider).valueOrNull?.uid;
     if (uid == null) return;
-    await ref
-        .read(firestoreServiceProvider)
-        .updateUserSettings(uid, {'themeSeedColor': picked});
+    await ref.read(firestoreServiceProvider).updateUserSettings(uid, {
+      'themeSeedColor': picked,
+    });
   }
 
   @override
@@ -537,13 +587,15 @@ class _ThemeSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ListTile(
-          leading: const Icon(Icons.palette_outlined),
-          title: const Text('테마'),
+        const ListTile(
+          leading: Icon(Icons.brightness_6_outlined),
+          title: Text('화면 모드'),
+          subtitle: Text('시스템 설정을 따르거나 직접 선택'),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
           child: SegmentedButton<String>(
+            showSelectedIcon: false,
             segments: const [
               ButtonSegment(value: 'system', label: Text('시스템')),
               ButtonSegment(value: 'light', label: Text('라이트')),
@@ -553,22 +605,60 @@ class _ThemeSection extends ConsumerWidget {
             onSelectionChanged: (selection) async {
               final uid = ref.read(authStateProvider).valueOrNull?.uid;
               if (uid == null) return;
-              await ref
-                  .read(firestoreServiceProvider)
-                  .updateUserSettings(uid, {'themeMode': selection.first});
+              await ref.read(firestoreServiceProvider).updateUserSettings(uid, {
+                'themeMode': selection.first,
+              });
             },
           ),
         ),
         ListTile(
-          contentPadding: const EdgeInsets.only(left: 16, right: 16, top: 8),
-          title: const Text('색상'),
-          trailing: GestureDetector(
+          leading: const Icon(Icons.palette_outlined),
+          title: const Text('테마 색상'),
+          subtitle: const Text('앱 전체 분위기를 바꾸는 seed 색상'),
+          trailing: InkWell(
             onTap: () => _pickColor(context, ref, user?.themeSeedColor),
+            customBorder: const CircleBorder(),
             child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(color: Color(seedColor), shape: BoxShape.circle),
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Color(seedColor),
+                shape: BoxShape.circle,
+              ),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppSectionHeader(title: title, icon: icon),
+        Card(
+          child: Column(
+            children: [
+              for (var index = 0; index < children.length; index++) ...[
+                children[index],
+                if (index != children.length - 1)
+                  const Divider(indent: 16, endIndent: 16),
+              ],
+            ],
           ),
         ),
       ],
@@ -592,9 +682,9 @@ class _HolidaySection extends ConsumerWidget {
           final uid = ref.read(authStateProvider).valueOrNull?.uid;
           if (uid == null) return;
           await HolidayPrefs.saveEnabled(value);
-          await ref
-              .read(firestoreServiceProvider)
-              .updateUserSettings(uid, {'showKoreanHolidays': value});
+          await ref.read(firestoreServiceProvider).updateUserSettings(uid, {
+            'showKoreanHolidays': value,
+          });
 
           final events = ref.read(eventsStreamProvider).valueOrNull ?? [];
           final anniversaries =
@@ -671,8 +761,10 @@ class _BriefingSection extends ConsumerWidget {
             onTap: () async {
               final picked = await showTimePicker(
                 context: context,
-                initialTime:
-                    TimeOfDay(hour: user.briefingHour, minute: user.briefingMinute),
+                initialTime: TimeOfDay(
+                  hour: user.briefingHour,
+                  minute: user.briefingMinute,
+                ),
               );
               if (picked != null) {
                 _apply(

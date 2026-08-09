@@ -8,6 +8,7 @@ import '../../models/event_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../utils/import_utils.dart';
+import '../../widgets/app_surface.dart';
 
 class ImportScreen extends ConsumerStatefulWidget {
   const ImportScreen({super.key});
@@ -202,8 +203,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       final color = couple == null
           ? 0xFF42A5F5
           : couple.ownerUid == myUid
-              ? couple.ownerColor
-              : couple.partnerColor;
+          ? couple.ownerColor
+          : couple.partnerColor;
       final firestoreService = ref.read(firestoreServiceProvider);
 
       for (final event in eventsToImport) {
@@ -227,9 +228,9 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _isImporting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('일정을 가져오지 못했습니다')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('일정을 가져오지 못했습니다')));
     }
   }
 
@@ -253,8 +254,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       body: _isLoading && !_hasPermission
           ? const Center(child: CircularProgressIndicator())
           : !_hasPermission
-              ? _PermissionDeniedView(onRetry: _checkAndRequestPermission)
-              : _buildCalendarBody(existingEvents),
+          ? _PermissionDeniedView(onRetry: _checkAndRequestPermission)
+          : _buildCalendarBody(existingEvents),
       bottomNavigationBar: _hasPermission && !_isLoading
           ? SafeArea(
               minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -277,15 +278,43 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: DropdownButtonFormField<String>(
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return AppPageBody(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: colors.primaryContainer,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.mobile_friendly_outlined,
+                  color: colors.onPrimaryContainer,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '선택한 기기 캘린더에서 앞으로 90일의 일정을 가져옵니다.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          DropdownButtonFormField<String>(
             initialValue: _selectedCalendarId,
             decoration: const InputDecoration(
-              labelText: '캘린더',
-              border: OutlineInputBorder(),
+              labelText: '가져올 캘린더',
+              prefixIcon: Icon(Icons.calendar_month_outlined),
             ),
             items: _calendars
                 .map(
@@ -310,50 +339,62 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                     _retrieveEvents(calendarId);
                   },
           ),
-        ),
-        Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _errorMessage != null
-                  ? Center(child: Text(_errorMessage!))
-                  : _deviceEvents.isEmpty
-                      ? const Center(child: Text('가져올 일정이 없습니다'))
-                      : ListView.builder(
-                          itemCount: _deviceEvents.length,
-                          itemBuilder: (context, index) {
-                            final event = _deviceEvents[index];
-                            final duplicate = isDuplicateEvent(
-                              existingEvents,
-                              title: _eventTitle(event),
-                              start: event.start!,
-                              isAllDay: event.allDay ?? false,
-                            );
-                            return CheckboxListTile(
-                              value:
-                                  !duplicate && _selectedIndexes.contains(index),
-                              title: Text(_eventTitle(event)),
-                              subtitle: Text(
-                                _eventSubtitle(
-                                  event,
-                                  isDuplicate: duplicate,
-                                ),
-                              ),
-                              onChanged: duplicate
-                                  ? null
-                                  : (checked) {
-                                      setState(() {
-                                        if (checked == true) {
-                                          _selectedIndexes.add(index);
-                                        } else {
-                                          _selectedIndexes.remove(index);
-                                        }
-                                      });
-                                    },
-                            );
-                          },
+          const SizedBox(height: 10),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _errorMessage != null
+                ? AppEmptyState(
+                    icon: Icons.cloud_off_outlined,
+                    title: _errorMessage!,
+                    message: '캘린더를 다시 선택하거나 잠시 후 시도해 주세요.',
+                  )
+                : _deviceEvents.isEmpty
+                ? const AppEmptyState(
+                    icon: Icons.event_busy_outlined,
+                    title: '가져올 일정이 없습니다',
+                    message: '선택한 캘린더의 앞으로 90일이 비어 있어요.',
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.only(top: 4, bottom: 12),
+                    itemCount: _deviceEvents.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final event = _deviceEvents[index];
+                      final duplicate = isDuplicateEvent(
+                        existingEvents,
+                        title: _eventTitle(event),
+                        start: event.start!,
+                        isAllDay: event.allDay ?? false,
+                      );
+                      return Card(
+                        child: CheckboxListTile(
+                          value: !duplicate && _selectedIndexes.contains(index),
+                          title: Text(
+                            _eventTitle(event),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Text(
+                            _eventSubtitle(event, isDuplicate: duplicate),
+                          ),
+                          onChanged: duplicate
+                              ? null
+                              : (checked) {
+                                  setState(() {
+                                    if (checked == true) {
+                                      _selectedIndexes.add(index);
+                                    } else {
+                                      _selectedIndexes.remove(index);
+                                    }
+                                  });
+                                },
                         ),
-        ),
-      ],
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -365,17 +406,14 @@ class _PermissionDeniedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('캘린더 권한이 필요합니다'),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: onRetry,
-            child: const Text('권한 다시 요청'),
-          ),
-        ],
+    return AppEmptyState(
+      icon: Icons.calendar_month_outlined,
+      title: '캘린더 권한이 필요합니다',
+      message: '기기 일정을 확인하려면 캘린더 접근을 허용해 주세요.',
+      action: FilledButton.icon(
+        onPressed: onRetry,
+        icon: const Icon(Icons.lock_open_outlined),
+        label: const Text('권한 다시 요청'),
       ),
     );
   }

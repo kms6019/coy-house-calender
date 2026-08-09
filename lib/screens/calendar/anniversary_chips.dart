@@ -10,6 +10,8 @@ class AnniversaryChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (anniversaries.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final now = DateTime.now();
     final sorted = sortedForDisplay(anniversaries, now);
     return SizedBox(
@@ -24,8 +26,11 @@ class AnniversaryChips extends StatelessWidget {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
+              color: colors.surface.withValues(alpha: 0.72),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: colors.outlineVariant.withValues(alpha: 0.44),
+              ),
             ),
             child: Row(
               children: [
@@ -34,15 +39,15 @@ class AnniversaryChips extends StatelessWidget {
                       ? Icons.favorite
                       : Icons.cake,
                   size: 13,
-                  color: Colors.white,
+                  color: colors.primary,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '${a.title} ${dDayLabel(a, now)}',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colors.onSurface,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],

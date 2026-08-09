@@ -10,13 +10,18 @@ import '../../services/samsung_calendar_sync_service.dart';
 import '../../theme/couple_palette.dart';
 import '../../theme/event_icons.dart';
 import '../../utils/conflict_utils.dart';
+import '../../widgets/app_surface.dart';
 
 class EventFormScreen extends ConsumerStatefulWidget {
   final EventModel? event;
   final DateTime? initialDate;
   final String? initialTitle;
-  const EventFormScreen(
-      {super.key, this.event, this.initialDate, this.initialTitle});
+  const EventFormScreen({
+    super.key,
+    this.event,
+    this.initialDate,
+    this.initialTitle,
+  });
 
   @override
   ConsumerState<EventFormScreen> createState() => _EventFormScreenState();
@@ -55,7 +60,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   @override
   void initState() {
     super.initState();
-    final base = widget.event?.startDateTime ?? widget.initialDate ?? DateTime.now();
+    final base =
+        widget.event?.startDateTime ?? widget.initialDate ?? DateTime.now();
     _startDate = DateUtils.dateOnly(base);
     _startTime = widget.event != null
         ? TimeOfDay.fromDateTime(widget.event!.startDateTime)
@@ -90,16 +96,26 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
 
   DateTime get _startDateTime => _isAllDay
       ? _startDate
-      : DateTime(_startDate.year, _startDate.month, _startDate.day,
-            _startTime.hour, _startTime.minute);
+      : DateTime(
+          _startDate.year,
+          _startDate.month,
+          _startDate.day,
+          _startTime.hour,
+          _startTime.minute,
+        );
 
   DateTime? get _endDateTime {
     if (_endDate == null) return null;
     if (_isAllDay) return _endDate;
     final et = _endTime;
     if (et == null) return null;
-    return DateTime(_endDate!.year, _endDate!.month, _endDate!.day,
-        et.hour, et.minute);
+    return DateTime(
+      _endDate!.year,
+      _endDate!.month,
+      _endDate!.day,
+      et.hour,
+      et.minute,
+    );
   }
 
   bool get _endBeforeStart {
@@ -141,8 +157,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     if (!mounted) return false;
 
     final lines = conflicts.take(3).map(_conflictLabel).join('\n');
-    final extra =
-        conflicts.length > 3 ? '\n외 ${conflicts.length - 3}건' : '';
+    final extra = conflicts.length > 3 ? '\n외 ${conflicts.length - 3}건' : '';
 
     final proceed = await showDialog<bool>(
       context: context,
@@ -182,9 +197,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     final authUid = ref.read(authStateProvider).valueOrNull?.uid;
     if (userModel == null || authUid == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('사용자 정보를 불러오지 못했습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('사용자 정보를 불러오지 못했습니다.')));
         setState(() => _loading = false);
       }
       return;
@@ -194,9 +209,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     final coupleId = couple?.coupleId ?? userModel.coupleId;
 
     final color = couple != null
-        ? (couple.ownerUid == authUid
-            ? couple.ownerColor
-            : couple.partnerColor)
+        ? (couple.ownerUid == authUid ? couple.ownerColor : couple.partnerColor)
         : 0xFF42A5F5;
 
     final effectiveColor = _color ?? color;
@@ -211,7 +224,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           coupleId: coupleId,
           createdByUid: authUid,
           title: _titleCtrl.text.trim(),
-          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          description: _descCtrl.text.trim().isEmpty
+              ? null
+              : _descCtrl.text.trim(),
           startDateTime: _startDateTime,
           endDateTime: _endDateTime,
           isAllDay: _isAllDay,
@@ -230,7 +245,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       } else {
         saved = widget.event!.copyWith(
           title: _titleCtrl.text.trim(),
-          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          description: _descCtrl.text.trim().isEmpty
+              ? null
+              : _descCtrl.text.trim(),
           startDateTime: _startDateTime,
           endDateTime: _endDateTime,
           isAllDay: _isAllDay,
@@ -242,8 +259,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         saved = saved.copyWithRepeat(
           repeat: _repeat,
           repeatUntil: _repeat == RepeatRule.none ? null : _repeatUntil,
-          excludedDates:
-              _repeat == RepeatRule.none ? const [] : widget.event!.excludedDates,
+          excludedDates: _repeat == RepeatRule.none
+              ? const []
+              : widget.event!.excludedDates,
         );
         saved = saved.copyWith(color: effectiveColor).copyWithIcon(_icon);
         await fs.updateEvent(saved, editorUid: authUid);
@@ -270,15 +288,15 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       if (!mounted) return;
       context.go('/calendar');
       if (warningMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(warningMessage)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(warningMessage)));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('저장에 실패했습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('저장에 실패했습니다.')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -307,10 +325,14 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: c == current
-                      ? Icon(Icons.check,
-                          color: Color(c).computeLuminance() > 0.5
-                              ? Colors.black54
-                              : Colors.white)
+                      ? Icon(
+                          Icons.check,
+                          color:
+                              ThemeData.estimateBrightnessForColor(Color(c)) ==
+                                  Brightness.dark
+                              ? Theme.of(ctx).colorScheme.surface
+                              : Theme.of(ctx).colorScheme.onSurface,
+                        )
                       : null,
                 ),
               );
@@ -319,7 +341,9 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
         ],
       ),
     );
@@ -347,7 +371,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                   alignment: Alignment.center,
                   decoration: _icon == emoji
                       ? BoxDecoration(
-                          color: Colors.deepPurple.withValues(alpha: 0.15),
+                          color: Theme.of(ctx).colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(8),
                         )
                       : null,
@@ -359,10 +383,13 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, ''),
-              child: const Text('아이콘 제거')),
+            onPressed: () => Navigator.pop(ctx, ''),
+            child: const Text('아이콘 제거'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
         ],
       ),
     );
@@ -417,6 +444,8 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final isEdit = widget.event != null;
     final dateFmt = DateFormat('yyyy년 M월 d일 (E)', 'ko_KR');
     final dateFmtShort = DateFormat('M월 d일 (E)', 'ko_KR');
@@ -425,231 +454,381 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       appBar: AppBar(
         title: Text(isEdit ? '일정 수정' : '일정 추가'),
         actions: [
-          TextButton(
-            onPressed: _loading ? null : _save,
-            style: TextButton.styleFrom(foregroundColor: Colors.white),
-            child: _loading
-                ? const SizedBox(width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('저장'),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilledButton.tonal(
+              onPressed: _loading ? null : _save,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(72, 42),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+              ),
+              child: _loading
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colors.primary,
+                      ),
+                    )
+                  : const Text('저장'),
+            ),
           ),
         ],
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // 제목
-            TextFormField(
-              controller: _titleCtrl,
-              decoration: const InputDecoration(
-                hintText: '제목',
-                border: InputBorder.none,
+        child: AppPageBody(
+          child: ListView(
+            children: [
+              Text(
+                isEdit ? '일정을 다듬어 볼까요?' : '어떤 하루를 함께할까요?',
+                style: theme.textTheme.headlineSmall,
               ),
-              style: Theme.of(context).textTheme.titleLarge,
-              validator: (v) => (v == null || v.trim().isEmpty) ? '제목을 입력하세요' : null,
-              textInputAction: TextInputAction.next,
-            ),
-            const Divider(),
-
-            // 종일 스위치
-            SwitchListTile(
-              title: const Text('종일'),
-              value: _isAllDay,
-              onChanged: (v) => setState(() {
-                _isAllDay = v;
-                if (v) { _endTime = null; }
-              }),
-              contentPadding: EdgeInsets.zero,
-            ),
-            const Divider(),
-
-            // 시작 날짜
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today_outlined),
-              title: Text(dateFmt.format(_startDate)),
-              onTap: () => _pickDate(isStart: true),
-            ),
-            // 시작 시간
-            if (!_isAllDay)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.access_time_outlined),
-                title: Text(_startTime.format(context)),
-                onTap: () => _pickTime(isStart: true),
-              ),
-            const Divider(),
-
-            // 종료 날짜/시간
-            if (_endDate != null) ...[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.event_outlined),
-                title: Text('종료: ${dateFmtShort.format(_endDate!)}'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: () => setState(() { _endDate = null; _endTime = null; }),
-                ),
-                onTap: () => _pickDate(isStart: false),
-              ),
-              if (!_isAllDay)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.access_time_outlined),
-                  title: Text(_endTime != null
-                      ? _endTime!.format(context)
-                      : '종료 시간 선택'),
-                  subtitle: _endBeforeStart
-                      ? const Text('종료 시간이 시작보다 앞섭니다',
-                          style: TextStyle(color: Colors.red, fontSize: 12))
-                      : null,
-                  onTap: () => _pickTime(isStart: false),
-                ),
-              const Divider(),
-            ] else ...[
-              TextButton.icon(
-                onPressed: () => _pickDate(isStart: false),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('종료 날짜 추가'),
-              ),
-              const Divider(),
-            ],
-
-            // 알림
-            SwitchListTile(
-              title: const Text('알림'),
-              secondary: const Icon(Icons.notifications_outlined),
-              value: _hasAlarm,
-              onChanged: (v) => setState(() => _hasAlarm = v),
-              contentPadding: EdgeInsets.zero,
-            ),
-            if (_hasAlarm)
-              Padding(
-                padding: const EdgeInsets.only(left: 16, bottom: 8),
-                child: DropdownButton<int>(
-                  value: _alarmMinutes,
-                  items: List.generate(_alarmOptions.length, (i) => DropdownMenuItem(
-                    value: _alarmOptions[i],
-                    child: Text(_alarmLabels[i]),
-                  )),
-                  onChanged: (v) => setState(() => _alarmMinutes = v ?? 30),
+              const SizedBox(height: 5),
+              Text(
+                '날짜부터 분위기까지 차근차근 정해 보세요.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
                 ),
               ),
-            const Divider(),
-
-            // 반복
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.repeat),
-              title: const Text('반복'),
-              trailing: DropdownButton<RepeatRule>(
-                value: _repeat,
-                underline: const SizedBox.shrink(),
-                items: RepeatRule.values
-                    .map((r) => DropdownMenuItem(
-                          value: r,
-                          child: Text(_repeatLabels[r]!),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(() {
-                  _repeat = v ?? RepeatRule.none;
-                  if (_repeat == RepeatRule.none) _repeatUntil = null;
-                }),
+              const SizedBox(height: 18),
+              TextFormField(
+                controller: _titleCtrl,
+                autofocus: !isEdit,
+                decoration: const InputDecoration(
+                  hintText: '일정 제목',
+                  prefixIcon: Icon(Icons.edit_calendar_outlined),
+                ),
+                style: theme.textTheme.titleLarge,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? '제목을 입력하세요' : null,
+                textInputAction: TextInputAction.next,
               ),
-            ),
-            if (_repeat != RepeatRule.none)
-              ListTile(
-                contentPadding: const EdgeInsets.only(left: 40),
-                title: Text(_repeatUntil != null
-                    ? '종료: ${dateFmtShort.format(_repeatUntil!)}'
-                    : '반복 종료일 (선택 안 함 = 계속 반복)'),
-                trailing: _repeatUntil != null
-                    ? IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        onPressed: () => setState(() => _repeatUntil = null),
-                      )
-                    : null,
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _repeatUntil ?? _startDate,
-                    firstDate: _startDate, // 시작일 이전 방지
-                    lastDate: DateTime(2030),
-                  );
-                  if (picked != null) setState(() => _repeatUntil = picked);
-                },
+              const SizedBox(height: 22),
+              _EventFormSection(
+                title: '날짜와 시간',
+                subtitle: '시작과 종료 시간을 정해 주세요.',
+                icon: Icons.calendar_month_outlined,
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      title: const Text('종일'),
+                      secondary: const Icon(Icons.wb_sunny_outlined),
+                      value: _isAllDay,
+                      onChanged: (v) => setState(() {
+                        _isAllDay = v;
+                        if (v) _endTime = null;
+                      }),
+                    ),
+                    const Divider(indent: 16, endIndent: 16),
+                    ListTile(
+                      leading: const AppIconBadge(
+                        icon: Icons.calendar_today_outlined,
+                      ),
+                      title: const Text('시작 날짜'),
+                      subtitle: Text(dateFmt.format(_startDate)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _pickDate(isStart: true),
+                    ),
+                    if (!_isAllDay)
+                      ListTile(
+                        leading: const AppIconBadge(
+                          icon: Icons.access_time_outlined,
+                        ),
+                        title: const Text('시작 시간'),
+                        subtitle: Text(_startTime.format(context)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _pickTime(isStart: true),
+                      ),
+                    const Divider(indent: 16, endIndent: 16),
+                    if (_endDate != null) ...[
+                      ListTile(
+                        leading: const AppIconBadge(icon: Icons.event_outlined),
+                        title: const Text('종료 날짜'),
+                        subtitle: Text(dateFmtShort.format(_endDate!)),
+                        trailing: IconButton(
+                          tooltip: '종료 날짜 제거',
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () => setState(() {
+                            _endDate = null;
+                            _endTime = null;
+                          }),
+                        ),
+                        onTap: () => _pickDate(isStart: false),
+                      ),
+                      if (!_isAllDay)
+                        ListTile(
+                          leading: const AppIconBadge(
+                            icon: Icons.schedule_outlined,
+                          ),
+                          title: const Text('종료 시간'),
+                          subtitle: Text(
+                            _endTime != null
+                                ? _endTime!.format(context)
+                                : '종료 시간 선택',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _pickTime(isStart: false),
+                        ),
+                      if (_endBeforeStart)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(70, 0, 16, 12),
+                          child: Text(
+                            '종료 시간이 시작보다 앞섭니다',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.error,
+                            ),
+                          ),
+                        ),
+                    ] else
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                          child: TextButton.icon(
+                            onPressed: () => _pickDate(isStart: false),
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('종료 날짜 추가'),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            SwitchListTile(
-              title: const Text('함께하는 일정'),
-              secondary: const Icon(Icons.favorite, color: Colors.pink),
-              value: _isShared,
-              onChanged: (v) => setState(() => _isShared = v),
-              contentPadding: EdgeInsets.zero,
-            ),
-            if (widget.event == null)
-              SwitchListTile(
-                title: const Text('상대에게 제안'),
-                secondary: const Icon(Icons.send_outlined),
-                value: _propose,
-                onChanged: (v) => setState(() => _propose = v),
-                contentPadding: EdgeInsets.zero,
+              const SizedBox(height: 18),
+              _EventFormSection(
+                title: '알림과 반복',
+                subtitle: '잊지 않도록 미리 알려 드릴게요.',
+                icon: Icons.notifications_active_outlined,
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      title: const Text('알림'),
+                      subtitle: Text(
+                        _hasAlarm
+                            ? _alarmLabels[_alarmOptions.indexOf(_alarmMinutes)]
+                            : '사용 안 함',
+                      ),
+                      secondary: const Icon(Icons.notifications_outlined),
+                      value: _hasAlarm,
+                      onChanged: (v) => setState(() => _hasAlarm = v),
+                    ),
+                    if (_hasAlarm)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(70, 0, 18, 12),
+                        child: DropdownButtonFormField<int>(
+                          initialValue: _alarmMinutes,
+                          decoration: const InputDecoration(labelText: '알림 시점'),
+                          items: List.generate(
+                            _alarmOptions.length,
+                            (i) => DropdownMenuItem(
+                              value: _alarmOptions[i],
+                              child: Text(_alarmLabels[i]),
+                            ),
+                          ),
+                          onChanged: (v) =>
+                              setState(() => _alarmMinutes = v ?? 30),
+                        ),
+                      ),
+                    const Divider(indent: 16, endIndent: 16),
+                    ListTile(
+                      leading: const Icon(Icons.repeat),
+                      title: const Text('반복'),
+                      trailing: DropdownButton<RepeatRule>(
+                        value: _repeat,
+                        underline: const SizedBox.shrink(),
+                        items: RepeatRule.values
+                            .map(
+                              (r) => DropdownMenuItem(
+                                value: r,
+                                child: Text(_repeatLabels[r]!),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setState(() {
+                          _repeat = v ?? RepeatRule.none;
+                          if (_repeat == RepeatRule.none) _repeatUntil = null;
+                        }),
+                      ),
+                    ),
+                    if (_repeat != RepeatRule.none)
+                      ListTile(
+                        contentPadding: const EdgeInsets.only(
+                          left: 58,
+                          right: 12,
+                        ),
+                        title: const Text('반복 종료'),
+                        subtitle: Text(
+                          _repeatUntil != null
+                              ? dateFmtShort.format(_repeatUntil!)
+                              : '계속 반복',
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_repeatUntil != null)
+                              IconButton(
+                                tooltip: '반복 종료일 제거',
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: () =>
+                                    setState(() => _repeatUntil = null),
+                              ),
+                            const Icon(Icons.chevron_right),
+                          ],
+                        ),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _repeatUntil ?? _startDate,
+                            firstDate: _startDate,
+                            lastDate: DateTime(2030),
+                          );
+                          if (picked != null) {
+                            setState(() => _repeatUntil = picked);
+                          }
+                        },
+                      ),
+                  ],
+                ),
               ),
-            const Divider(),
-
-            // 색상
-            Builder(builder: (context) {
-              final couple = ref.watch(coupleStreamProvider).valueOrNull;
-              final authUid = ref.watch(authStateProvider).valueOrNull?.uid;
-              final defaultColor = couple != null
-                  ? (couple.ownerUid == authUid
-                      ? couple.ownerColor
-                      : couple.partnerColor)
-                  : 0xFF42A5F5;
-              final shown = _color ?? defaultColor;
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.palette_outlined),
-                title: const Text('색상'),
-                trailing: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Color(shown),
-                    shape: BoxShape.circle,
+              const SizedBox(height: 18),
+              _EventFormSection(
+                title: '함께하기',
+                subtitle: '둘이 함께 보거나 상대에게 제안할 수 있어요.',
+                icon: Icons.favorite_outline,
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      title: const Text('함께하는 일정'),
+                      subtitle: const Text('두 사람의 일정으로 표시'),
+                      secondary: const Icon(Icons.favorite_outline),
+                      value: _isShared,
+                      onChanged: (v) => setState(() => _isShared = v),
+                    ),
+                    if (widget.event == null) ...[
+                      const Divider(indent: 16, endIndent: 16),
+                      SwitchListTile(
+                        title: const Text('상대에게 제안'),
+                        subtitle: const Text('상대가 수락하면 일정 확정'),
+                        secondary: const Icon(Icons.send_outlined),
+                        value: _propose,
+                        onChanged: (v) => setState(() => _propose = v),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              _EventFormSection(
+                title: '꾸미기',
+                subtitle: '달력에서 한눈에 알아볼 수 있게 꾸며 보세요.',
+                icon: Icons.auto_awesome_outlined,
+                child: Column(
+                  children: [
+                    Builder(
+                      builder: (context) {
+                        final couple = ref
+                            .watch(coupleStreamProvider)
+                            .valueOrNull;
+                        final authUid = ref
+                            .watch(authStateProvider)
+                            .valueOrNull
+                            ?.uid;
+                        final defaultColor = couple != null
+                            ? (couple.ownerUid == authUid
+                                  ? couple.ownerColor
+                                  : couple.partnerColor)
+                            : 0xFF42A5F5;
+                        final shown = _color ?? defaultColor;
+                        return ListTile(
+                          leading: const Icon(Icons.palette_outlined),
+                          title: const Text('색상'),
+                          subtitle: const Text('일정 막대와 표시 점 색상'),
+                          trailing: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: Color(shown),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: colors.outlineVariant,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          onTap: () => _pickColor(shown),
+                        );
+                      },
+                    ),
+                    const Divider(indent: 16, endIndent: 16),
+                    ListTile(
+                      leading: const Icon(Icons.emoji_emotions_outlined),
+                      title: const Text('아이콘'),
+                      subtitle: const Text('제목 앞에 표시'),
+                      trailing: Text(
+                        _icon ?? '없음',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: _icon != null
+                              ? colors.onSurface
+                              : colors.onSurfaceVariant,
+                        ),
+                      ),
+                      onTap: _pickIcon,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              _EventFormSection(
+                title: '메모',
+                subtitle: '필요한 내용을 자유롭게 적어 두세요.',
+                icon: Icons.notes_outlined,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: TextFormField(
+                    controller: _descCtrl,
+                    decoration: const InputDecoration(
+                      hintText: '장소, 준비물, 기억하고 싶은 내용을 적어 보세요.',
+                    ),
+                    maxLines: null,
+                    minLines: 4,
                   ),
                 ),
-                onTap: () => _pickColor(shown),
-              );
-            }),
-            // 아이콘
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.emoji_emotions_outlined),
-              title: const Text('아이콘'),
-              trailing: Text(_icon ?? '없음',
-                  style: TextStyle(
-                      fontSize: _icon != null ? 22 : 14,
-                      color: _icon != null ? null : Colors.grey)),
-              onTap: _pickIcon,
-            ),
-            const Divider(),
-
-            // 메모
-            TextFormField(
-              controller: _descCtrl,
-              decoration: const InputDecoration(
-                hintText: '메모 추가',
-                border: InputBorder.none,
-                prefixIcon: Icon(Icons.notes_outlined),
               ),
-              maxLines: null,
-              minLines: 3,
-            ),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _EventFormSection extends StatelessWidget {
+  const _EventFormSection({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppSectionHeader(title: title, subtitle: subtitle, icon: icon),
+        AppSectionCard(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: child,
+        ),
+      ],
     );
   }
 }
