@@ -98,7 +98,6 @@ class _WeekRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final weekDateKeys = weekDates;
 
     // 여러 날에 걸친 일정 -> 레인 배정
@@ -228,14 +227,16 @@ class _WeekRow extends StatelessWidget {
                             : placement.event.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        // 대비 상대는 테마 배경이 아니라 막대 자신의 색이다.
+                        // surface/onSurface를 쓰면 다크모드에서 뒤집혀 안 보인다.
                         style: TextStyle(
                           color:
                               ThemeData.estimateBrightnessForColor(
                                     placement.event.colorValue,
                                   ) ==
                                   Brightness.dark
-                              ? colors.surface
-                              : colors.onSurface,
+                              ? Colors.white
+                              : Colors.black87,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                         ),
