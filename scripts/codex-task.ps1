@@ -16,7 +16,8 @@ param(
 $ErrorActionPreference = "Stop"
 $orca = "$env:LOCALAPPDATA\Programs\orca\resources\bin\orca.exe"
 $marker = "__CODEX_TASK_DONE_$([guid]::NewGuid().ToString('N').Substring(0,8))__"
-$mode = if ($Write) { "--full-auto" } else { "" }
+# codex exec 는 --full-auto 를 받지 않는다. 쓰기는 -s workspace-write 로 준다.
+$mode = if ($Write) { "-s workspace-write" } else { "-s read-only" }
 $promptPath = (Resolve-Path $PromptFile).Path
 
 # Orca 터미널 생성 (pwsh에서 프롬프트 파일을 codex exec stdin으로)

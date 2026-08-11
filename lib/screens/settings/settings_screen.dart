@@ -575,10 +575,13 @@ class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
     setState(() => _busy = true);
     try {
       final events = ref.read(eventsStreamProvider).valueOrNull ?? [];
-      final s = await SamsungCalendarSyncService().resetCalendar(events);
+      final service = SamsungCalendarSyncService();
+      // 앱이 만든 캘린더를 전부 지우고(사본까지 통째로) 한 번만 다시 만든다.
+      final removed = await service.deleteAppCalendars();
+      final s = await service.syncAll(events);
       if (!mounted) return;
       final msg = StringBuffer(
-        '초기화: 캘린더 ${s.appCalendars}개 삭제 · 일정 ${s.created}건 재생성',
+        '초기화: 캘린더 $removed개 삭제 · 일정 ${s.created}건 재생성',
       );
       if (s.firstError != null) msg.write('\n${s.firstError}');
       ScaffoldMessenger.of(context).showSnackBar(
