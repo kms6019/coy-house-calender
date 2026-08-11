@@ -13,6 +13,49 @@ class SamsungSyncSummary {
   String? firstError;
 }
 
+/// 마커가 없는 옛 이벤트를 대조하기 위한 보조 지문. 마커가 있으면 쓰지 않는다.
+String deviceEventKey(String? title, DateTime? start) =>
+    '${(title ?? '').trim()}|${start?.millisecondsSinceEpoch ?? 0}';
+
+/// 중복 판정에 쓰는 기기 이벤트 1건.
+typedef DeviceEventRef = ({String id, String? marker, String key});
+
+/// 같은 앱 일정을 가리키는 사본 중 하나만 남기고 나머지 id를 돌려준다.
+///
+/// 그룹핑 기준은 **마커 우선**이다. 제목+시작만으로 묶으면 "출근"처럼 제목과
+/// 시각이 같은 별개의 정상 일정을 지워버릴 수 있어서, 마커 없는 항목은
+/// [knownKeys](앱이 실제로 가진 일정의 지문)에 들어 있을 때만 정리한다.
+///
+/// 반복 일정은 Instances 조회가 회차마다 행을 돌려주므로, 먼저 id로 중복을 없앤다.
+List<String> duplicateDeviceEventIdsToDelete(
+  List<DeviceEventRef> events,
+  Set<String> mappedIds, {
+  Set<String> knownKeys = const {},
+}) {
+  final seen = <String>{};
+  final groups = <String, List<String>>{};
+  for (final e in events) {
+    if (!seen.add(e.id)) continue; // 같은 이벤트의 다른 회차
+    final String group;
+    if (e.marker != null) {
+      group = 'm:${e.marker}';
+    } else if (knownKeys.contains(e.key)) {
+      group = 'k:${e.key}';
+    } else {
+      continue; // 앱이 만든 게 아닐 수 있다 — 건드리지 않는다
+    }
+    groups.putIfAbsent(group, () => <String>[]).add(e.id);
+  }
+
+  final doomed = <String>[];
+  for (final ids in groups.values) {
+    if (ids.length < 2) continue;
+    final keep = ids.firstWhere(mappedIds.contains, orElse: () => ids.first);
+    doomed.addAll(ids.where((id) => id != keep));
+  }
+  return doomed;
+}
+
 class SamsungCalendarSyncService {
   static const _calendarName = 'CoyHouseCalender';
 
@@ -123,62 +166,42 @@ class SamsungCalendarSyncService {
     }
   }
 
-  /// 매핑에 저장된 기기 이벤트 ID 중 실제 기기 캘린더에 남아 있는 것만 반환.
-  Future<Set<String>> _retrieveExistingDeviceIds(
-    Iterable<String> deviceIds,
-  ) async {
-    final ids = deviceIds.toList();
-    if (ids.isEmpty) return {};
-    final calendarId = await _mapping.getCalendarId();
-    if (calendarId == null) return {};
+  /// 전용 캘린더의 이벤트 전체. 조회에 실패하면 null — 이때는 아무것도 만들지 않는다.
+  ///
+  /// 예전에는 조회가 빈 목록을 돌려주면 "기기에 아무것도 없다"고 믿고 전부 새로
+  /// 만들었다. 쿼리가 잠깐 실패하거나 범위 밖으로 잡히면 동기화 한 번에 사본이
+  /// 하나씩 늘었고, 그게 쌓여 같은 일정이 수십 개가 됐다.
+  Future<List<Event>?> _retrieveAllDeviceEvents(String calendarId) async {
     // 기간 미지정 시 플러그인이 끝을 Long.MAX_VALUE로 잡아 Instances 쿼리가
     // 깨질 수 있어 명시적 범위를 함께 전달한다.
     final now = DateTime.now();
     final result = await _plugin.retrieveEvents(
       calendarId,
       RetrieveEventsParams(
-        eventIds: ids,
         startDate: DateTime(now.year - 5),
         endDate: DateTime(now.year + 5),
       ),
     );
     if (result.hasErrors || result.data == null) {
-      debugPrint('[SamsungCalendarSync] retrieveEvents error: ${_formatErrors(result.errors)}');
-      // 조회 실패 시 전부 존재한다고 보고 기존 update 경로 유지 (중복 생성 방지)
-      return ids.toSet();
+      debugPrint(
+        '[SamsungCalendarSync] retrieveEvents error: ${_formatErrors(result.errors)}',
+      );
+      return null;
     }
-    return result.data!
-        .map((e) => e.eventId)
-        .whereType<String>()
-        .toSet();
+    return result.data!;
   }
 
-  /// 전용 캘린더 안에서 매핑에 없는 고아 이벤트 삭제.
-  /// CoyHouseCalender 캘린더는 앱 전용이므로 매핑에 없는 항목은
-  /// 과거 버그로 남은 찌꺼기다 (예: 날짜 수정 중 매핑이 덮여 고아가 된 항목).
-  Future<int> _deleteOrphans() async {
-    final calendarId = await _mapping.getCalendarId();
-    if (calendarId == null) return 0;
-    final now = DateTime.now();
-    final result = await _plugin.retrieveEvents(
-      calendarId,
-      RetrieveEventsParams(
-        startDate: DateTime(now.year - 5),
-        endDate: DateTime(now.year + 5),
-      ),
-    );
-    if (result.hasErrors || result.data == null) return 0;
-    final mappedIds = (await _mapping.loadAll()).values.toSet();
-    final orphanIds = result.data!
-        .map((e) => e.eventId)
-        .whereType<String>()
-        .where((id) => !mappedIds.contains(id))
-        .toSet();
+  Future<int> _deleteDeviceEvents(
+    String calendarId,
+    Iterable<String> ids,
+  ) async {
     var deleted = 0;
-    for (final id in orphanIds) {
+    for (final id in ids) {
       final del = await _plugin.deleteEvent(calendarId, id);
       if (del.hasErrors) {
-        debugPrint('[SamsungCalendarSync] orphan delete error: ${_formatErrors(del.errors)}');
+        debugPrint(
+          '[SamsungCalendarSync] delete error: ${_formatErrors(del.errors)}',
+        );
       } else {
         deleted++;
       }
@@ -196,20 +219,84 @@ class SamsungCalendarSyncService {
     if (!_supported || _syncAllInProgress) return summary;
     _syncAllInProgress = true;
     try {
-      final map = await _mapping.loadAll();
+      final calendarId = await _ensureCalendarExists();
+      if (calendarId == null) {
+        summary.firstError = '캘린더 권한/생성 실패';
+        return summary;
+      }
+
+      // 기기 상태를 못 읽으면 아무것도 만들지 않는다. 모르는 채로 생성하면
+      // 이미 있는 일정을 또 만들어 중복이 쌓인다.
+      final deviceEvents = await _retrieveAllDeviceEvents(calendarId);
+      if (deviceEvents == null) {
+        summary.firstError = '기기 캘린더 조회 실패 — 중복 방지를 위해 동기화를 건너뜀';
+        return summary;
+      }
+
+      var map = await _mapping.loadAll();
       final active = events.where((e) => !e.isProposed).toList();
-      // 사용자가 삼성캘린더에서 직접 지운 이벤트는 매핑이 남아 있어도
-      // 기기에 없으므로 update가 조용히 무시된다 → 실제 존재 여부 확인 후
-      // 없으면 생성 경로로 보낸다.
-      final existingDeviceIds = await _retrieveExistingDeviceIds(map.values);
+
+      final indexed = deviceEvents
+          .where((e) => e.eventId != null)
+          .map(
+            (e) => (
+              id: e.eventId!,
+              marker: firestoreIdFromMarker(e.url?.toString()),
+              key: deviceEventKey(e.title, e.start),
+            ),
+          )
+          .toList();
+
+      // 마커가 없는 옛 항목은 앱이 실제로 가진 일정과 지문이 맞을 때만 손댄다.
+      final knownKeys = active
+          .map((e) => deviceEventKey(e.title, e.startDateTime))
+          .toSet();
+
+      // 1) 이미 쌓인 중복 정리 — 같은 앱 일정의 사본은 하나만 남긴다.
+      final dupIds = duplicateDeviceEventIdsToDelete(
+        indexed,
+        map.values.toSet(),
+        knownKeys: knownKeys,
+      );
+      if (dupIds.isNotEmpty) {
+        debugPrint('[SamsungCalendarSync] 중복 ${dupIds.length}건 정리');
+        summary.deleted += await _deleteDeviceEvents(calendarId, dupIds);
+      }
+      final doomed = dupIds.toSet();
+      final liveIds = indexed
+          .map((e) => e.id)
+          .where((id) => !doomed.contains(id))
+          .toSet();
+
+      // 2) 기존 항목 입양 — 매핑이 유실돼도 다시 만들지 않는다. 마커 우선.
+      final byMarker = <String, String>{};
+      final byKey = <String, String>{};
+      for (final e in indexed) {
+        if (!liveIds.contains(e.id)) continue;
+        if (e.marker != null) {
+          byMarker.putIfAbsent(e.marker!, () => e.id);
+        } else {
+          byKey.putIfAbsent(e.key, () => e.id);
+        }
+      }
+
       for (final event in active) {
-        final deviceId = map[event.id];
+        final mapped = map[event.id];
+        var deviceId = (mapped != null && liveIds.contains(mapped))
+            ? mapped
+            : null;
+        deviceId ??= byMarker[event.id];
+        deviceId ??= byKey[deviceEventKey(event.title, event.startDateTime)];
+
         final String? error;
-        if (deviceId != null && existingDeviceIds.contains(deviceId)) {
+        if (deviceId != null) {
+          if (mapped != deviceId) {
+            await _mapping.setDeviceEventId(event.id, deviceId);
+          }
           error = await syncEventUpdate(event);
           if (error == null) summary.updated++;
         } else {
-          if (deviceId != null) await _mapping.removeDeviceEventId(event.id);
+          if (mapped != null) await _mapping.removeDeviceEventId(event.id);
           error = await syncEventCreate(event);
           if (error == null) summary.created++;
         }
@@ -218,13 +305,20 @@ class SamsungCalendarSyncService {
           summary.firstError ??= '${event.title}: $error';
         }
       }
+
+      // 3) 스트림에서 사라진 매핑 삭제
+      map = await _mapping.loadAll();
       final activeIds = active.map((e) => e.id).toSet();
       for (final staleId
           in map.keys.where((id) => !activeIds.contains(id)).toList()) {
         await syncEventDelete(staleId);
         summary.deleted++;
       }
-      summary.deleted += await _deleteOrphans();
+
+      // 4) 전용 캘린더에 남은 고아(매핑에 없는 항목) 삭제
+      final mappedIds = (await _mapping.loadAll()).values.toSet();
+      final orphans = liveIds.where((id) => !mappedIds.contains(id));
+      summary.deleted += await _deleteDeviceEvents(calendarId, orphans);
     } catch (e) {
       debugPrint('[SamsungCalendarSync] syncAll error: $e');
       summary.firstError ??= '$e';

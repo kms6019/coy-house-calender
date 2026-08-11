@@ -19,6 +19,22 @@ RecurrenceRule? _recurrenceRule(EventModel event) {
   return RecurrenceRule(freq, interval: 1, endDate: event.repeatUntil);
 }
 
+/// 기기 이벤트에 심는 앱 이벤트 식별자.
+///
+/// Android CalendarProvider 의 CUSTOM_APP_URI 로 저장된다(device_calendar 의
+/// [Event.url]). 매핑(SharedPreferences)이 유실돼도 이 값으로 기존 항목을
+/// 찾아 재사용할 수 있어, 같은 일정을 다시 만들지 않는다.
+String coyEventMarker(String firestoreEventId) =>
+    'coyhouse://event/$firestoreEventId';
+
+/// [url] 이 앱이 심은 마커면 Firestore 이벤트 id, 아니면 null.
+String? firestoreIdFromMarker(String? url) {
+  const prefix = 'coyhouse://event/';
+  if (url == null || !url.startsWith(prefix)) return null;
+  final id = url.substring(prefix.length).trim();
+  return id.isEmpty ? null : id;
+}
+
 Event buildDeviceCalendarEvent(
   EventModel event, {
   required String calendarId,
@@ -47,5 +63,6 @@ Event buildDeviceCalendarEvent(
     end: endTz,
     allDay: event.isAllDay,
     recurrenceRule: _recurrenceRule(event),
+    url: Uri.tryParse(coyEventMarker(event.id)),
   );
 }

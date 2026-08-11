@@ -7,6 +7,9 @@ class CalendarEventMapping {
 
   Future<Map<String, String>> _loadMap() async {
     final prefs = await SharedPreferences.getInstance();
+    // 백그라운드 FCM은 별도 isolate라 SharedPreferences 캐시가 따로 논다.
+    // 캐시를 읽으면 상대 isolate가 쓴 매핑을 못 봐서 같은 일정을 또 만든다.
+    await prefs.reload();
     final raw = prefs.getString(_mapKey);
     if (raw == null) return {};
     final decoded = jsonDecode(raw) as Map<String, dynamic>;
@@ -39,6 +42,7 @@ class CalendarEventMapping {
 
   Future<String?> getCalendarId() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
     return prefs.getString(_calendarIdKey);
   }
 
