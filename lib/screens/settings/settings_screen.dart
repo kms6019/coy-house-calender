@@ -505,20 +505,81 @@ class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
     }
   }
 
+  /// 중복이 쌓였을 때의 확실한 복구: 전용 캘린더를 지우고 다시 만든다.
+  Future<void> _reset() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('삼성캘린더 초기화'),
+        content: const Text(
+          '기기의 CoyHouseCalender 캘린더를 통째로 지우고 다시 만듭니다.\n\n'
+          '쌓인 중복 일정이 전부 사라지고, 앱의 일정만 한 번씩 새로 들어갑니다. '
+          '다른 캘린더(구글·삼성 기본 등)는 건드리지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('초기화'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    setState(() => _busy = true);
+    try {
+      final events = ref.read(eventsStreamProvider).valueOrNull ?? [];
+      final s = await SamsungCalendarSyncService().resetCalendar(events);
+      if (!mounted) return;
+      final msg = StringBuffer(
+        '초기화: 캘린더 ${s.appCalendars}개 삭제 · 일정 ${s.created}건 재생성',
+      );
+      if (s.firstError != null) msg.write('\n${s.firstError}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$msg'), duration: const Duration(seconds: 12)),
+      );
+    } catch (e) {
+      debugPrint('[Settings] reset error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('초기화에 실패했습니다')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.sync),
-      title: const Text('삼성캘린더 지금 동기화'),
-      subtitle: const Text('모든 일정을 기기 캘린더·위젯에 다시 반영'),
-      trailing: _busy
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : null,
-      onTap: _busy ? null : _sync,
+    final spinner = _busy
+        ? const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : null;
+    return Column(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.sync),
+          title: const Text('삼성캘린더 지금 동기화'),
+          subtitle: const Text('모든 일정을 기기 캘린더·위젯에 다시 반영'),
+          trailing: spinner,
+          onTap: _busy ? null : _sync,
+        ),
+        ListTile(
+          leading: const Icon(Icons.cleaning_services_outlined),
+          title: const Text('삼성캘린더 초기화'),
+          subtitle: const Text('중복이 쌓였을 때 — 전용 캘린더를 지우고 다시 만듭니다'),
+          trailing: spinner,
+          onTap: _busy ? null : _reset,
+        ),
+      ],
     );
   }
 }

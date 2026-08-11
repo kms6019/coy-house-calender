@@ -266,6 +266,16 @@ class SamsungCalendarSyncService {
       var map = await _mapping.loadAll();
       final active = events.where((e) => !e.isProposed).toList();
 
+      // 조회가 "성공 + 빈 목록"을 주는 경우가 있다(Instances 쿼리 특성/OEM 차이).
+      // 이전에 만든 기록(매핑)이 있는데 기기에 하나도 안 보인다면 조회를 믿을 수
+      // 없다는 뜻이다. 여기서 생성 경로를 타면 전량이 사본으로 다시 생긴다.
+      if (deviceEvents.isEmpty && map.isNotEmpty) {
+        summary.firstError =
+            '기기 캘린더가 비어 보입니다(조회 신뢰 불가) — 중복 방지를 위해 생성을 건너뜁니다. '
+            '설정에서 "삼성캘린더 초기화"를 실행하세요.';
+        return summary;
+      }
+
       final indexed = deviceEvents
           .where((e) => e.eventId != null)
           .map(
@@ -378,6 +388,58 @@ class SamsungCalendarSyncService {
     } finally {
       _syncAllInProgress = false;
     }
+    return summary;
+  }
+
+  /// 전용 캘린더를 통째로 지우고 다시 만든 뒤 한 번만 동기화한다.
+  ///
+  /// 기기 이벤트 조회를 신뢰할 수 없을 때(성공했는데 빈 목록) 쌓인 사본을
+  /// 확실히 없애는 방법. CoyHouseCalender 는 앱이 만든 전용 캘린더라 통째로
+  /// 지워도 사용자의 다른 캘린더에는 영향이 없다.
+  ///
+  /// 같은 이름의 캘린더가 여러 개 생겼을 경우도 전부 지운다.
+  Future<SamsungSyncSummary> resetCalendar(List<EventModel> events) async {
+    final summary = SamsungSyncSummary();
+    if (!_supported) return summary;
+    try {
+      final result = await _plugin.retrieveCalendars();
+      if (result.hasErrors || result.data == null) {
+        summary.firstError = '캘린더 목록 조회 실패: ${_formatErrors(result.errors)}';
+        return summary;
+      }
+      final targets =
+          result.data!.where((c) => c.name == _calendarName).toList();
+      summary.appCalendars = targets.length;
+
+      for (final calendar in targets) {
+        final id = calendar.id;
+        if (id == null) continue;
+        final del = await _plugin.deleteCalendar(id);
+        if (del.hasErrors) {
+          debugPrint(
+            '[SamsungCalendarSync] deleteCalendar error: ${_formatErrors(del.errors)}',
+          );
+          summary.failed++;
+          summary.firstError ??= _formatErrors(del.errors);
+        } else {
+          summary.deleted++;
+        }
+      }
+
+      await _mapping.clear();
+    } catch (e) {
+      debugPrint('[SamsungCalendarSync] resetCalendar error: $e');
+      summary.firstError ??= '$e';
+      return summary;
+    }
+
+    // 새 캘린더에 처음부터 다시 만든다.
+    final rebuilt = await syncAll(events);
+    summary.created = rebuilt.created;
+    summary.updated = rebuilt.updated;
+    summary.deviceEvents = rebuilt.deviceEvents;
+    summary.failed += rebuilt.failed;
+    summary.firstError ??= rebuilt.firstError;
     return summary;
   }
 

@@ -50,4 +50,11 @@ class CalendarEventMapping {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_calendarIdKey, calendarId);
   }
+
+  /// 캘린더를 통째로 새로 만들 때 매핑과 캘린더 ID를 모두 버린다.
+  Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_mapKey);
+    await prefs.remove(_calendarIdKey);
+  }
 }
