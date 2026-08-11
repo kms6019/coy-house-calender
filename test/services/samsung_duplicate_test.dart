@@ -32,6 +32,31 @@ void main() {
         isNot(deviceEventKey('회식', DateTime(2026, 8, 12, 20))),
       );
     });
+
+    // 종일 일정은 기기에 UTC 자정, 앱에는 로컬로 있어 epoch 가 시차만큼 어긋난다.
+    // 날짜 성분으로 묶어야 같은 일정으로 인식된다.
+    test('종일 일정은 시차가 있어도 같은 키', () {
+      final appSide = DateTime(2026, 8, 12); // 로컬 자정
+      final deviceSide = DateTime.utc(2026, 8, 12); // 기기 저장값
+      expect(
+        deviceEventKey('출근', appSide, allDay: true),
+        deviceEventKey('출근', deviceSide, allDay: true),
+      );
+    });
+
+    test('종일 일정은 날짜가 다르면 다른 키', () {
+      expect(
+        deviceEventKey('출근', DateTime(2026, 8, 12), allDay: true),
+        isNot(deviceEventKey('출근', DateTime(2026, 8, 13), allDay: true)),
+      );
+    });
+
+    test('종일과 시각 지정은 서로 다른 키', () {
+      expect(
+        deviceEventKey('출근', DateTime(2026, 8, 12), allDay: true),
+        isNot(deviceEventKey('출근', DateTime(2026, 8, 12))),
+      );
+    });
   });
 
   group('duplicateDeviceEventIdsToDelete', () {

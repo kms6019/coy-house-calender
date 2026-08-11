@@ -11,11 +11,33 @@ class SamsungSyncSummary {
   int deleted = 0;
   int failed = 0;
   String? firstError;
+
+  /// 진단용 — 왜 정리가 안 됐는지 화면에서 확인하기 위한 값들
+  int appCalendars = 0; // CoyHouseCalender 이름의 캘린더 개수 (2개 이상이면 문제)
+  int deviceEvents = 0; // 전용 캘린더에서 읽어들인 기기 이벤트 수
+  int duplicatesFound = 0;
+  int unmatched = 0; // 마커도 지문도 앱 일정과 안 맞아 건드리지 않은 항목
+
+  String get diagnostics =>
+      '캘린더 $appCalendars개 · 기기일정 $deviceEvents건 · '
+      '중복 $duplicatesFound건 · 미확인 $unmatched건';
 }
 
 /// 마커가 없는 옛 이벤트를 대조하기 위한 보조 지문. 마커가 있으면 쓰지 않는다.
-String deviceEventKey(String? title, DateTime? start) =>
-    '${(title ?? '').trim()}|${start?.millisecondsSinceEpoch ?? 0}';
+///
+/// 종일 일정은 기기에 UTC 자정으로 저장되고 앱은 로컬 시각을 들고 있어
+/// epoch 가 시차만큼 어긋난다. 그래서 종일은 epoch 대신 날짜 성분으로 묶는다.
+String deviceEventKey(String? title, DateTime? start, {bool allDay = false}) {
+  final t = (title ?? '').trim();
+  if (start == null) return '$t|0';
+  if (allDay) {
+    final y = start.year.toString().padLeft(4, '0');
+    final m = start.month.toString().padLeft(2, '0');
+    final d = start.day.toString().padLeft(2, '0');
+    return '$t|D$y-$m-$d';
+  }
+  return '$t|${start.millisecondsSinceEpoch}';
+}
 
 /// 중복 판정에 쓰는 기기 이벤트 1건.
 typedef DeviceEventRef = ({String id, String? marker, String key});
@@ -191,6 +213,14 @@ class SamsungCalendarSyncService {
     return result.data!;
   }
 
+  /// CoyHouseCalender 이름의 캘린더 개수. 2개 이상이면 한쪽만 청소되어
+  /// 중복이 계속 보일 수 있다 — 진단용.
+  Future<int> _countAppCalendars() async {
+    final result = await _plugin.retrieveCalendars();
+    if (result.hasErrors || result.data == null) return 0;
+    return result.data!.where((c) => c.name == _calendarName).length;
+  }
+
   Future<int> _deleteDeviceEvents(
     String calendarId,
     Iterable<String> ids,
@@ -242,15 +272,33 @@ class SamsungCalendarSyncService {
             (e) => (
               id: e.eventId!,
               marker: firestoreIdFromMarker(e.url?.toString()),
-              key: deviceEventKey(e.title, e.start),
+              key: deviceEventKey(
+                e.title,
+                e.start,
+                allDay: e.allDay ?? false,
+              ),
             ),
           )
           .toList();
 
       // 마커가 없는 옛 항목은 앱이 실제로 가진 일정과 지문이 맞을 때만 손댄다.
       final knownKeys = active
-          .map((e) => deviceEventKey(e.title, e.startDateTime))
+          .map(
+            (e) => deviceEventKey(
+              e.title,
+              e.startDateTime,
+              allDay: e.isAllDay,
+            ),
+          )
           .toSet();
+
+      summary.deviceEvents = indexed.map((e) => e.id).toSet().length;
+      summary.appCalendars = await _countAppCalendars();
+      summary.unmatched = indexed
+          .where((e) => e.marker == null && !knownKeys.contains(e.key))
+          .map((e) => e.id)
+          .toSet()
+          .length;
 
       // 1) 이미 쌓인 중복 정리 — 같은 앱 일정의 사본은 하나만 남긴다.
       final dupIds = duplicateDeviceEventIdsToDelete(
@@ -258,6 +306,7 @@ class SamsungCalendarSyncService {
         map.values.toSet(),
         knownKeys: knownKeys,
       );
+      summary.duplicatesFound = dupIds.length;
       if (dupIds.isNotEmpty) {
         debugPrint('[SamsungCalendarSync] 중복 ${dupIds.length}건 정리');
         summary.deleted += await _deleteDeviceEvents(calendarId, dupIds);
@@ -286,7 +335,11 @@ class SamsungCalendarSyncService {
             ? mapped
             : null;
         deviceId ??= byMarker[event.id];
-        deviceId ??= byKey[deviceEventKey(event.title, event.startDateTime)];
+        deviceId ??= byKey[deviceEventKey(
+          event.title,
+          event.startDateTime,
+          allDay: event.isAllDay,
+        )];
 
         final String? error;
         if (deviceId != null) {

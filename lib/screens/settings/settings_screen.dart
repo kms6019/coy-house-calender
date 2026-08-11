@@ -484,9 +484,13 @@ class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
         final msg = StringBuffer(
           '동기화: 생성 ${s.created} · 갱신 ${s.updated} · 삭제 ${s.deleted} · 실패 ${s.failed}',
         );
+        msg.write('\n${s.diagnostics}');
         if (s.firstError != null) msg.write('\n${s.firstError}');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$msg'), duration: const Duration(seconds: 8)),
+          SnackBar(
+            content: Text('$msg'),
+            duration: const Duration(seconds: 15),
+          ),
         );
       }
     } catch (e) {
