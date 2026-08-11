@@ -254,6 +254,36 @@ class SamsungCalendarSyncService {
     return result.data!;
   }
 
+  /// 플러그인이 실제로 보는 캘린더 목록. 앱이 기기 캘린더를 왜 못 찾는지
+  /// 눈으로 확인하기 위한 진단용.
+  Future<String> describeCalendars() async {
+    if (!_supported) return '안드로이드가 아닙니다';
+    final buffer = StringBuffer();
+    final cached = await _mapping.getCalendarId();
+    buffer.writeln('캐시된 캘린더 ID: ${cached ?? '(없음)'}');
+    buffer.writeln('찾는 이름: $_calendarName');
+
+    final result = await _plugin.retrieveCalendars();
+    if (result.hasErrors) {
+      buffer.writeln('조회 오류: ${_formatErrors(result.errors)}');
+    }
+    final calendars = result.data;
+    if (calendars == null) {
+      buffer.writeln('조회 결과 없음(null)');
+      return buffer.toString();
+    }
+
+    buffer.writeln('전체 ${calendars.length}개:');
+    for (final c in calendars) {
+      final mine = c.name == _calendarName ? ' ★일치' : '';
+      buffer.writeln(
+        '· "${c.name}" / id=${c.id} / 계정=${c.accountName}'
+        '${c.isReadOnly == true ? ' / 읽기전용' : ''}$mine',
+      );
+    }
+    return buffer.toString();
+  }
+
   /// CoyHouseCalender 이름의 캘린더 개수. 2개 이상이면 한쪽만 청소되어
   /// 중복이 계속 보일 수 있다 — 진단용.
   Future<int> _countAppCalendars() async {
@@ -453,6 +483,29 @@ class SamsungCalendarSyncService {
       final targets =
           result.data!.where((c) => c.name == _calendarName).toList();
       summary.appCalendars = targets.length;
+
+      // 이름으로 하나도 못 찾았는데 캐시된 캘린더 ID가 있으면, 플러그인이 앱
+      // 캘린더를 못 보고 있다는 뜻이다. 이 상태에서 "지울 게 없으니 새로 만들자"로
+      // 넘어가면 캘린더가 하나 더 생긴다(실제로 4개까지 늘었다).
+      if (targets.isEmpty) {
+        final cached = await _mapping.getCalendarId();
+        if (cached != null) {
+          final del = await _plugin.deleteCalendar(cached);
+          if (del.hasErrors || del.data != true) {
+            summary.failed++;
+            summary.firstError =
+                '앱이 기기 캘린더를 인식하지 못합니다(이름으로 조회 0개). '
+                '새로 만들지 않았습니다 — 삼성캘린더 앱에서 CoyHouseCalender 캘린더를 '
+                '직접 모두 삭제한 뒤, 설정에서 "기기 캘린더 동기화"를 다시 켜세요.';
+            return summary;
+          }
+          summary.deleted++;
+        } else {
+          summary.firstError =
+              '지울 캘린더를 찾지 못했습니다. 삼성캘린더 앱에서 직접 삭제해 주세요.';
+          return summary;
+        }
+      }
 
       for (final calendar in targets) {
         final id = calendar.id;

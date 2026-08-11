@@ -515,6 +515,38 @@ class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
     }
   }
 
+  Future<void> _diagnose() async {
+    setState(() => _busy = true);
+    final report = await SamsungCalendarSyncService().describeCalendars();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('기기 캘린더 진단'),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            report,
+            style: const TextStyle(fontSize: 12, height: 1.5),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: report));
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('복사'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 중복이 쌓였을 때의 확실한 복구: 전용 캘린더를 지우고 다시 만든다.
   Future<void> _reset() async {
     final ok = await showDialog<bool>(
@@ -594,6 +626,12 @@ class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
           subtitle: const Text('모든 일정을 기기 캘린더·위젯에 다시 반영'),
           trailing: spinner,
           onTap: (_busy || !_syncEnabled) ? null : _sync,
+        ),
+        ListTile(
+          leading: const Icon(Icons.bug_report_outlined),
+          title: const Text('기기 캘린더 진단'),
+          subtitle: const Text('앱이 어떤 캘린더를 보고 있는지 확인'),
+          onTap: _busy ? null : _diagnose,
         ),
         ListTile(
           enabled: _syncEnabled,
