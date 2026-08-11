@@ -136,6 +136,22 @@ class SamsungCalendarSyncService {
   String _formatErrors(List<ResultError> errors) =>
       errors.map((e) => '${e.errorCode}: ${e.errorMessage}').join(', ');
 
+  /// 이 기기에서 플러그인 조회가 깨졌는지 판정.
+  ///
+  /// 실제 사례: 캘린더가 20개 반환되는데 id·name·accountName 이 전부 null 이었다
+  /// (Android 16 / device_calendar 4.3.3, 최신 버전이며 수정판 없음). 이러면 앱은
+  /// 기존 캘린더를 영원히 못 찾아 매번 새로 만들고, 삭제도 불가능해 사본이 쌓인다.
+  static bool isPluginBroken(List<Calendar> calendars) =>
+      calendars.isNotEmpty && calendars.every((c) => c.id == null);
+
+  /// 깨진 게 확인되면 동기화를 자동으로 끈다 — 더 망가뜨리지 않는 게 우선이다.
+  Future<bool> _disableIfPluginBroken(List<Calendar>? calendars) async {
+    if (calendars == null || !isPluginBroken(calendars)) return false;
+    debugPrint('[SamsungCalendarSync] 플러그인 조회 손상 감지 — 동기화 자동 비활성화');
+    await DeviceSyncPrefs.setEnabled(false);
+    return true;
+  }
+
   Future<String?> _ensureCalendarExists() async {
     final cached = await _mapping.getCalendarId();
     if (cached != null) return cached;
@@ -161,6 +177,9 @@ class SamsungCalendarSyncService {
       return null;
     }
     final calendars = calendarsResult.data;
+    // 조회가 깨진 기기에서는 기존 캘린더를 못 찾아 새로 만들게 된다 → 중단.
+    if (await _disableIfPluginBroken(calendars)) return null;
+
     final existing = calendars?.where((c) => c.name == _calendarName).toList();
     if (existing != null && existing.isNotEmpty && existing.first.id != null) {
       final id = existing.first.id!;
@@ -273,6 +292,14 @@ class SamsungCalendarSyncService {
       return buffer.toString();
     }
 
+    if (isPluginBroken(calendars)) {
+      buffer.writeln(
+        '\n[진단] 캘린더 정보가 전부 비어 있습니다(id/이름/계정 null).\n'
+        '이 기기에서는 캘린더 플러그인 조회가 동작하지 않습니다.\n'
+        '앱이 기존 캘린더를 못 찾아 새로 만들게 되므로 동기화를 껐습니다.\n'
+        '삼성캘린더 앱에서 CoyHouseCalender 캘린더를 직접 삭제해 주세요.\n',
+      );
+    }
     buffer.writeln('전체 ${calendars.length}개:');
     for (final c in calendars) {
       final mine = c.name == _calendarName ? ' ★일치' : '';
@@ -480,6 +507,14 @@ class SamsungCalendarSyncService {
         summary.firstError = '캘린더 목록 조회 실패: ${_formatErrors(result.errors)}';
         return summary;
       }
+      if (await _disableIfPluginBroken(result.data)) {
+        summary.firstError =
+            '이 기기에서는 캘린더 조회가 동작하지 않아(정보가 전부 비어 있음) '
+            '앱이 캘린더를 지울 수 없습니다. 동기화를 껐습니다 — '
+            '삼성캘린더 앱에서 CoyHouseCalender 캘린더를 직접 삭제해 주세요.';
+        return summary;
+      }
+
       final targets =
           result.data!.where((c) => c.name == _calendarName).toList();
       summary.appCalendars = targets.length;
