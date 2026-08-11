@@ -1,9 +1,11 @@
 import 'dart:io' show Platform;
 import 'package:device_calendar/device_calendar.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:timezone/timezone.dart' as tz;
 import '../models/event_model.dart';
 import 'calendar_event_mapping.dart';
 import 'device_calendar_event_builder.dart';
+import 'device_sync_prefs.dart';
 
 class SamsungSyncSummary {
   int created = 0;
@@ -92,6 +94,45 @@ class SamsungCalendarSyncService {
 
   bool get _supported => !kIsWeb && Platform.isAndroid;
 
+  Future<bool> get _enabled async =>
+      _supported && await DeviceSyncPrefs.isEnabled();
+
+  /// 이 기기에서 방금 쓴 이벤트를 다시 읽을 수 있는지 실제로 확인한다.
+  ///
+  /// 조회가 "성공 + 빈 목록"을 돌려주는 기기가 있어서, 조회 결과만 보고
+  /// 생성 여부를 정하면 사본이 무한히 쌓인다. 탐침 이벤트를 하나 만들어
+  /// 되읽어 보고, 못 읽으면 이 기기에서는 생성을 하지 않는다.
+  Future<bool> _verifyReadable(String calendarId) async {
+    final now = DateTime.now();
+    final start = tz.TZDateTime.from(
+      DateTime(now.year, now.month, now.day).add(const Duration(days: 1)),
+      tz.local,
+    );
+    final probe = Event(
+      calendarId,
+      title: '__coyhouse_probe__',
+      start: start,
+      end: start.add(const Duration(minutes: 30)),
+    );
+    final created = await _plugin.createOrUpdateEvent(probe);
+    final probeId = created?.data;
+    if (created == null || created.hasErrors || probeId == null) {
+      debugPrint('[SamsungCalendarSync] 탐침 생성 실패 — 읽기 검증 불가');
+      return false;
+    }
+    try {
+      final events = await _retrieveAllDeviceEvents(calendarId);
+      final visible =
+          events != null && events.any((e) => e.eventId == probeId);
+      if (!visible) {
+        debugPrint('[SamsungCalendarSync] 탐침을 되읽지 못함 — 조회 신뢰 불가');
+      }
+      return visible;
+    } finally {
+      await _plugin.deleteEvent(calendarId, probeId);
+    }
+  }
+
   String _formatErrors(List<ResultError> errors) =>
       errors.map((e) => '${e.errorCode}: ${e.errorMessage}').join(', ');
 
@@ -138,7 +179,7 @@ class SamsungCalendarSyncService {
 
   /// 성공 시 null, 실패 시 에러 메시지 반환.
   Future<String?> syncEventCreate(EventModel event) async {
-    if (!_supported) return null;
+    if (!await _enabled) return null;
     try {
       final calendarId = await _ensureCalendarExists();
       if (calendarId == null) return '캘린더 권한/생성 실패';
@@ -161,7 +202,7 @@ class SamsungCalendarSyncService {
 
   /// 성공 시 null, 실패 시 에러 메시지 반환.
   Future<String?> syncEventUpdate(EventModel event) async {
-    if (!_supported) return null;
+    if (!await _enabled) return null;
     try {
       final calendarId = await _ensureCalendarExists();
       if (calendarId == null) return '캘린더 권한/생성 실패';
@@ -246,7 +287,7 @@ class SamsungCalendarSyncService {
   /// proposed(제안 중) 이벤트는 확정 전이므로 제외.
   Future<SamsungSyncSummary> syncAll(List<EventModel> events) async {
     final summary = SamsungSyncSummary();
-    if (!_supported || _syncAllInProgress) return summary;
+    if (!await _enabled || _syncAllInProgress) return summary;
     _syncAllInProgress = true;
     try {
       final calendarId = await _ensureCalendarExists();
@@ -266,13 +307,15 @@ class SamsungCalendarSyncService {
       var map = await _mapping.loadAll();
       final active = events.where((e) => !e.isProposed).toList();
 
-      // 조회가 "성공 + 빈 목록"을 주는 경우가 있다(Instances 쿼리 특성/OEM 차이).
-      // 이전에 만든 기록(매핑)이 있는데 기기에 하나도 안 보인다면 조회를 믿을 수
-      // 없다는 뜻이다. 여기서 생성 경로를 타면 전량이 사본으로 다시 생긴다.
-      if (deviceEvents.isEmpty && map.isNotEmpty) {
+      // 조회가 "성공 + 빈 목록"을 주는 기기가 있다. 매핑이 비어 있으면 이 조건만으로는
+      // 구분이 안 되므로(초기화 직후 등), 탐침을 써서 조회 자체를 신뢰할 수 있는지
+      // 직접 확인한다. 못 믿으면 아무것도 만들지 않는다 — 만들면 사본만 쌓인다.
+      if (deviceEvents.isEmpty && !await _verifyReadable(calendarId)) {
         summary.firstError =
-            '기기 캘린더가 비어 보입니다(조회 신뢰 불가) — 중복 방지를 위해 생성을 건너뜁니다. '
-            '설정에서 "삼성캘린더 초기화"를 실행하세요.';
+            '이 기기에서는 캘린더 조회가 동작하지 않습니다(방금 만든 일정도 못 읽음). '
+            '중복이 쌓이므로 동기화를 중단했습니다. '
+            '설정에서 "기기 캘린더 동기화"를 끄고, 삼성캘린더 앱에서 '
+            'CoyHouseCalender 캘린더를 직접 삭제하세요.';
         return summary;
       }
 
@@ -415,15 +458,29 @@ class SamsungCalendarSyncService {
         final id = calendar.id;
         if (id == null) continue;
         final del = await _plugin.deleteCalendar(id);
-        if (del.hasErrors) {
+        // data == true 여야 실제로 지워진 것이다. 오류가 없다는 것만으로는 부족하다.
+        if (del.hasErrors || del.data != true) {
           debugPrint(
-            '[SamsungCalendarSync] deleteCalendar error: ${_formatErrors(del.errors)}',
+            '[SamsungCalendarSync] deleteCalendar 실패: ${_formatErrors(del.errors)}',
           );
           summary.failed++;
-          summary.firstError ??= _formatErrors(del.errors);
         } else {
           summary.deleted++;
         }
+      }
+
+      // 삭제가 실제로 됐는지 이름으로 재확인한다. 남아 있으면 절대 다시 만들지
+      // 않는다 — 예전에는 여기서 사본을 매번 16개씩 더 얹었다.
+      final after = await _plugin.retrieveCalendars();
+      final remaining = (after.hasErrors || after.data == null)
+          ? -1
+          : after.data!.where((c) => c.name == _calendarName).length;
+      if (remaining != 0) {
+        summary.firstError =
+            '기기에서 CoyHouseCalender 캘린더를 삭제하지 못했습니다'
+            '${remaining > 0 ? ' ($remaining개 남음)' : ''}. '
+            '다시 만들지 않았습니다 — 삼성캘린더 앱에서 직접 삭제한 뒤 다시 시도하세요.';
+        return summary;
       }
 
       await _mapping.clear();

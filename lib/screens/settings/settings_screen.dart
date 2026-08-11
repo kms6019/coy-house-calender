@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/couple_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
+import '../../services/device_sync_prefs.dart';
 import '../../services/holiday_prefs.dart';
 import '../../services/notification_service.dart';
 import '../../services/samsung_calendar_sync_service.dart';
@@ -471,6 +472,15 @@ class _ManualSyncSection extends ConsumerStatefulWidget {
 
 class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
   bool _busy = false;
+  bool _syncEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    DeviceSyncPrefs.isEnabled().then((v) {
+      if (mounted) setState(() => _syncEnabled = v);
+    });
+  }
 
   Future<void> _sync() async {
     setState(() => _busy = true);
@@ -565,19 +575,33 @@ class _ManualSyncSectionState extends ConsumerState<_ManualSyncSection> {
         : null;
     return Column(
       children: [
+        SwitchListTile(
+          secondary: const Icon(Icons.event_repeat_outlined),
+          title: const Text('기기 캘린더 동기화'),
+          subtitle: const Text('끄면 삼성캘린더에 일정을 쓰지 않습니다'),
+          value: _syncEnabled,
+          onChanged: _busy
+              ? null
+              : (v) async {
+                  await DeviceSyncPrefs.setEnabled(v);
+                  if (mounted) setState(() => _syncEnabled = v);
+                },
+        ),
         ListTile(
+          enabled: _syncEnabled,
           leading: const Icon(Icons.sync),
           title: const Text('삼성캘린더 지금 동기화'),
           subtitle: const Text('모든 일정을 기기 캘린더·위젯에 다시 반영'),
           trailing: spinner,
-          onTap: _busy ? null : _sync,
+          onTap: (_busy || !_syncEnabled) ? null : _sync,
         ),
         ListTile(
+          enabled: _syncEnabled,
           leading: const Icon(Icons.cleaning_services_outlined),
           title: const Text('삼성캘린더 초기화'),
           subtitle: const Text('중복이 쌓였을 때 — 전용 캘린더를 지우고 다시 만듭니다'),
           trailing: spinner,
-          onTap: _busy ? null : _reset,
+          onTap: (_busy || !_syncEnabled) ? null : _reset,
         ),
       ],
     );
@@ -845,3 +869,4 @@ class _BriefingSection extends ConsumerWidget {
     );
   }
 }
+
