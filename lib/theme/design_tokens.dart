@@ -31,6 +31,9 @@ class DesignTokens extends ThemeExtension<DesignTokens> {
   /// 일요일·공휴일 (원본 oklch(0.55 0.16 25) / oklch(0.68 0.15 25) 근사)
   final Color sunday;
 
+  /// 토요일 (공휴일이 아닌 날)
+  final Color saturday;
+
   const DesignTokens({
     required this.bg,
     required this.surface,
@@ -48,6 +51,7 @@ class DesignTokens extends ThemeExtension<DesignTokens> {
     required this.accent,
     required this.dim,
     required this.sunday,
+    required this.saturday,
   });
 
   static const _lightInk = Color(0xFF17171A);
@@ -70,6 +74,7 @@ class DesignTokens extends ThemeExtension<DesignTokens> {
     accent: accent,
     dim: _lightInk.withValues(alpha: 0.22),
     sunday: const Color(0xFFC93B2C),
+    saturday: const Color(0xFF2F66C9),
   );
 
   factory DesignTokens.dark(Color accent) => DesignTokens(
@@ -89,6 +94,7 @@ class DesignTokens extends ThemeExtension<DesignTokens> {
     accent: accent,
     dim: _darkInk.withValues(alpha: 0.22),
     sunday: const Color(0xFFF0796A),
+    saturday: const Color(0xFF7FA8F2),
   );
 
   /// 테마에 등록된 토큰. 없으면 밝기에 맞는 기본값.
@@ -118,6 +124,7 @@ class DesignTokens extends ThemeExtension<DesignTokens> {
     accent: accent ?? this.accent,
     dim: dim,
     sunday: sunday,
+    saturday: saturday,
   );
 
   @override
@@ -141,6 +148,7 @@ class DesignTokens extends ThemeExtension<DesignTokens> {
       accent: mix(accent, other.accent),
       dim: mix(dim, other.dim),
       sunday: mix(sunday, other.sunday),
+      saturday: mix(saturday, other.saturday),
     );
   }
 }

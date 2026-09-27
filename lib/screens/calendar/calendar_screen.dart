@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/event_model.dart';
 import '../../models/korean_holiday.dart';
 import '../../providers/calendar_provider.dart';
@@ -23,6 +24,11 @@ class CalendarScreen extends ConsumerStatefulWidget {
 }
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
+  static const _expandedKey = 'calendar_month_expanded';
+
+  /// true: 칸마다 일정 제목이 들어간 월 보기. false: 점 + 아래 선택일 일정.
+  bool _expanded = false;
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +36,25 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) maybePromptUpdate(context);
     });
+    SharedPreferences.getInstance().then((prefs) {
+      final saved = prefs.getBool(_expandedKey) ?? false;
+      if (mounted && saved != _expanded) setState(() => _expanded = saved);
+    });
+  }
+
+  void _setExpanded(bool value) {
+    if (value == _expanded) return;
+    setState(() => _expanded = value);
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.setBool(_expandedKey, value),
+    );
+  }
+
+  /// 아래로 밀면 펼치고, 위로 밀면 접는다.
+  void _onVerticalDragEnd(DragEndDetails details) {
+    final v = details.primaryVelocity ?? 0;
+    if (v > 250) _setExpanded(true);
+    if (v < -250) _setExpanded(false);
   }
 
   @override
@@ -95,34 +120,70 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ),
             const SizedBox(height: 16),
             _WeekdayRow(tokens: t),
-            SizedBox(
-              height: _gridHeight,
-              child: eventsAsync.hasError
-                  ? AppEmptyState(
-                      icon: Icons.cloud_off_outlined,
-                      title: '일정을 불러오지 못했습니다',
-                      message: '잠시 후 다시 시도해 주세요.',
-                      action: FilledButton.tonalIcon(
-                        onPressed: () => ref.invalidate(eventsStreamProvider),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('다시 시도'),
-                      ),
-                    )
-                  : _MonthPager(onDayTap: selectDay),
-            ),
-            Container(
-              height: 1,
-              color: t.line,
-              margin: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-            ),
             Expanded(
-              child: AgendaList(
-                day: selectedDay,
-                events: eventsForDay(allEvents, selectedDay),
-                holidayName: koreanHolidayNameForDate(
-                  groupKoreanHolidaysByDate(holidays),
-                  selectedDay,
-                ),
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final gridHeight = _expanded
+                      ? box.maxHeight - _handleHeight
+                      : _gridHeight;
+                  return Column(
+                    children: [
+                      GestureDetector(
+                        onVerticalDragEnd: _onVerticalDragEnd,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 280),
+                          curve: Curves.easeOutCubic,
+                          height: gridHeight.clamp(0, box.maxHeight),
+                          child: eventsAsync.hasError
+                              ? AppEmptyState(
+                                  icon: Icons.cloud_off_outlined,
+                                  title: '일정을 불러오지 못했습니다',
+                                  message: '잠시 후 다시 시도해 주세요.',
+                                  action: FilledButton.tonalIcon(
+                                    onPressed: () =>
+                                        ref.invalidate(eventsStreamProvider),
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('다시 시도'),
+                                  ),
+                                )
+                              : _MonthPager(
+                                  expanded: _expanded,
+                                  onDayTap: (day) {
+                                    selectDay(day);
+                                    // 펼친 보기에서 날짜를 누르면 그날 일정으로 접는다
+                                    _setExpanded(false);
+                                  },
+                                ),
+                        ),
+                      ),
+                      _ViewHandle(
+                        tokens: t,
+                        onTap: () => _setExpanded(!_expanded),
+                        onVerticalDragEnd: _onVerticalDragEnd,
+                      ),
+                      if (!_expanded)
+                        Expanded(
+                          // 목록 맨 위에서 더 끌어내리면 펼친 보기로
+                          child: NotificationListener<OverscrollNotification>(
+                            onNotification: (n) {
+                              if (n.dragDetails != null && n.overscroll < -6) {
+                                _setExpanded(true);
+                              }
+                              return false;
+                            },
+                            child: AgendaList(
+                              day: selectedDay,
+                              events: eventsForDay(allEvents, selectedDay),
+                              holidayName: koreanHolidayNameForDate(
+                                groupKoreanHolidaysByDate(holidays),
+                                selectedDay,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
@@ -138,6 +199,43 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
 /// 6주 × 50px + 상단 여백
 const double _gridHeight = 6 * 50 + 6;
+
+/// 달력과 일정 목록 사이 손잡이 높이
+const double _handleHeight = 20;
+
+/// 달력 ↔ 일정 목록 경계의 손잡이. 누르거나 위아래로 밀어 보기를 바꾼다.
+class _ViewHandle extends StatelessWidget {
+  final DesignTokens tokens;
+  final VoidCallback onTap;
+  final GestureDragEndCallback onVerticalDragEnd;
+  const _ViewHandle({
+    required this.tokens,
+    required this.onTap,
+    required this.onVerticalDragEnd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      onVerticalDragEnd: onVerticalDragEnd,
+      child: SizedBox(
+        height: _handleHeight,
+        child: Center(
+          child: Container(
+            width: 32,
+            height: 4,
+            decoration: BoxDecoration(
+              color: tokens.ink18,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// 초대형 월 숫자 + 이동 컨트롤
 class _MonthHeader extends StatelessWidget {
@@ -312,7 +410,9 @@ class _WeekdayRow extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1,
-                color: i == 0 ? tokens.sunday : tokens.ink30,
+                color: i == 0
+                    ? tokens.sunday
+                    : (i == 6 ? tokens.saturday : tokens.ink30),
               ),
             ),
           );
@@ -474,7 +574,8 @@ class _FabMenuState extends State<_FabMenu>
 /// 애니메이션으로 따라간다.
 class _MonthPager extends ConsumerStatefulWidget {
   final ValueChanged<DateTime> onDayTap;
-  const _MonthPager({required this.onDayTap});
+  final bool expanded;
+  const _MonthPager({required this.onDayTap, required this.expanded});
 
   @override
   ConsumerState<_MonthPager> createState() => _MonthPagerState();
@@ -551,6 +652,7 @@ class _MonthPagerState extends ConsumerState<_MonthPager> {
                 const <KoreanHoliday>[],
             selectedDay: selectedDay,
             onDayTap: widget.onDayTap,
+            expanded: widget.expanded,
           ),
         );
       },
