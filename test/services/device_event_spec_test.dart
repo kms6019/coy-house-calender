@@ -144,4 +144,11 @@ void main() {
       expect(spec.exdate, '20260703T000000Z');
     });
   });
+
+  test('격주는 WEEKLY;INTERVAL=2', () {
+    final spec = buildDeviceEventSpec(
+      _event(start: DateTime(2026, 7, 1, 9), repeat: 'biweekly'),
+    );
+    expect(spec.rrule, 'FREQ=WEEKLY;INTERVAL=2');
+  });
 }

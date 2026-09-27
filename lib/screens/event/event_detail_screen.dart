@@ -204,6 +204,7 @@ class EventDetailScreen extends ConsumerWidget {
     const labels = {
       RepeatRule.daily: '매일',
       RepeatRule.weekly: '매주',
+      RepeatRule.biweekly: '격주',
       RepeatRule.monthly: '매월',
       RepeatRule.yearly: '매년',
     };

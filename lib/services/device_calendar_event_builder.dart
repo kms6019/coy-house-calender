@@ -50,6 +50,8 @@ String? _rrule(EventModel event) {
       freq = 'DAILY';
     case RepeatRule.weekly:
       freq = 'WEEKLY';
+    case RepeatRule.biweekly:
+      freq = 'WEEKLY;INTERVAL=2';
     case RepeatRule.monthly:
       freq = 'MONTHLY';
     case RepeatRule.yearly:

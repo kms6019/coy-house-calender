@@ -27,7 +27,7 @@ void main() {
   });
 
   test('알 수 없는 repeat 문자열은 none 취급', () {
-    final e = EventModel.fromMap(_baseMap()..['repeat'] = 'biweekly');
+    final e = EventModel.fromMap(_baseMap()..['repeat'] = 'hourly');
     expect(e.repeat, RepeatRule.none);
   });
 

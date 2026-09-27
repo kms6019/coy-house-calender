@@ -36,6 +36,9 @@ bool _matchesRule(RepeatRule rule, DateTime startDay, DateTime day) {
       return true;
     case RepeatRule.weekly:
       return day.weekday == startDay.weekday;
+    case RepeatRule.biweekly:
+      return day.weekday == startDay.weekday &&
+          (day.difference(startDay).inDays ~/ 7).isEven;
     case RepeatRule.monthly:
       return day.day == startDay.day;
     case RepeatRule.yearly:

@@ -142,4 +142,24 @@ void main() {
       expect(eventsForDay([e], DateTime(2026, 7, 21)), isEmpty);
     });
   });
+
+  group('격주 반복', () {
+    // 2026-07-01 은 수요일
+    final e = _event(start: DateTime(2026, 7, 1, 19), repeat: 'biweekly');
+
+    test('시작 주부터 2주 간격 같은 요일에만 나온다', () {
+      final days = expandRecurringForRange([e], DateTime(2026, 7, 1), DateTime(2026, 8, 5))
+          .map((o) => o.startDateTime.day)
+          .toList();
+      expect(days, [1, 15, 29]);
+    });
+
+    test('다음 회차는 2주 뒤', () {
+      expect(nextOccurrence(e, DateTime(2026, 7, 2)), DateTime(2026, 7, 15, 19));
+    });
+
+    test('이름(biweekly)으로 복원된다', () {
+      expect(e.repeat, RepeatRule.biweekly);
+    });
+  });
 }

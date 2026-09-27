@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-enum RepeatRule { none, daily, weekly, monthly, yearly }
+/// Firestore 에는 이름(name)으로 저장된다. 순서는 반복 선택 목록 순서.
+enum RepeatRule { none, daily, weekly, biweekly, monthly, yearly }
 
 class EventModel {
   final String id;
