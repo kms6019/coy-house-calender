@@ -37,6 +37,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- 앱 내 업데이트 설치 결과 (PackageInstaller 세션) -->
+        <receiver
+            android:name=".UpdateStatusReceiver"
+            android:exported="false" />
         <!-- FCM 푸시 기본 아이콘/색상 -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"

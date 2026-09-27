@@ -7,5 +7,6 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         CalendarBridge.register(this, flutterEngine.dartExecutor.binaryMessenger)
+        AppUpdater.register(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 }

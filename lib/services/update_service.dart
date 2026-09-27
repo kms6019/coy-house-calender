@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -34,13 +35,15 @@ class UpdateInfo {
   }
 }
 
-/// 앱 실행 시 새 버전을 확인하고 APK를 받아 설치 화면까지 띄운다.
+/// 앱 실행 시 새 버전을 확인하고 APK를 받아 설치한다.
 ///
-/// 안드로이드는 앱이 스스로 조용히 설치할 수 없다(시스템 권한 필요). 여기까지가
-/// 사이드로딩 배포에서 가능한 최선이고, 마지막 설치 확인은 사용자가 눌러야 한다.
+/// 설치는 네이티브 PackageInstaller 세션(AppUpdater.kt)으로 한다. 안드로이드 12+
+/// 에서 이 앱이 자기 자신의 설치자면 확인 창 없이 업데이트되고, 브라우저로 처음
+/// 설치한 상태라면 첫 한 번만 확인 창이 뜬다.
 class UpdateService {
   static const _manifestUrl =
       'https://coy-house-calender.web.app/version.json';
+  static const _channel = MethodChannel('coyhouse/updater');
 
   /// 이번 실행에서 이미 물어봤는지 — 화면 전환마다 다시 뜨는 걸 막는다.
   static bool _askedThisSession = false;
@@ -107,8 +110,25 @@ class UpdateService {
     return file;
   }
 
-  /// 설치 화면을 띄운다. "출처를 알 수 없는 앱" 허용이 필요할 수 있다.
+  /// 확인 창 없이 설치할 수 있는 상태인지 (안드로이드 12+ 이고 설치자가 이 앱).
+  Future<bool> canInstallSilently() async {
+    if (!_supported) return false;
+    try {
+      return await _channel.invokeMethod<bool>('canInstallSilently') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 네이티브 세션으로 설치한다. 실패하면 예전 방식(설치 화면 열기)으로 넘어간다.
+  /// "출처를 알 수 없는 앱" 허용이 필요할 수 있다.
   Future<void> install(File apk) async {
+    try {
+      await _channel.invokeMethod<bool>('install', {'path': apk.path});
+      return;
+    } catch (e) {
+      debugPrint('[UpdateService] 세션 설치 실패, 설치 화면으로 대체: $e');
+    }
     final result = await OpenFilex.open(
       apk.path,
       type: 'application/vnd.android.package-archive',

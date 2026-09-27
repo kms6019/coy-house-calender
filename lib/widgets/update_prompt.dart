@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../services/update_service.dart';
 
@@ -6,6 +8,12 @@ Future<void> maybePromptUpdate(BuildContext context) async {
   final service = UpdateService();
   final info = await service.check();
   if (info == null || !context.mounted) return;
+
+  if (await service.canInstallSilently()) {
+    if (context.mounted) await _installQuietly(context, service, info);
+    return;
+  }
+  if (!context.mounted) return;
 
   final accepted = await showDialog<bool>(
     context: context,
@@ -95,4 +103,45 @@ Future<void> _downloadAndInstall(
   } finally {
     progress.dispose();
   }
+}
+
+/// 설치 대기 중인 앱 생명주기 리스너 — 설치 후엔 앱이 교체되므로 해제할 일이 없다.
+AppLifecycleListener? _pendingInstall;
+
+/// 확인 창 없이 설치할 수 있을 때: 조용히 받아 두고, 앱을 떠나는 순간 설치한다.
+/// 쓰는 도중에 앱이 꺼지지 않도록 설치는 화면을 벗어났을 때만 한다.
+Future<void> _installQuietly(
+  BuildContext context,
+  UpdateService service,
+  UpdateInfo info,
+) async {
+  final File apk;
+  try {
+    apk = await service.download(info);
+  } catch (e) {
+    debugPrint('[Update] 백그라운드 다운로드 실패: $e');
+    return; // 다음 실행 때 다시 시도
+  }
+
+  Future<void> installNow() async {
+    try {
+      await service.install(apk);
+    } catch (e) {
+      debugPrint('[Update] 자동 설치 실패: $e');
+    }
+  }
+
+  final state = WidgetsBinding.instance.lifecycleState;
+  if (state != null && state != AppLifecycleState.resumed) {
+    await installNow();
+    return;
+  }
+
+  _pendingInstall ??= AppLifecycleListener(onHide: installNow);
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('새 버전 ${info.versionName}을 받아 두었어요. 앱을 닫으면 업데이트돼요.'),
+    ),
+  );
 }
