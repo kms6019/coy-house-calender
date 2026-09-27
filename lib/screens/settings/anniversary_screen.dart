@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/anniversary_model.dart';
 import '../../providers/calendar_provider.dart';
 import '../../utils/dday_utils.dart';
+import '../../utils/lunar_utils.dart';
 import '../../widgets/app_surface.dart';
 
 class AnniversaryScreen extends ConsumerWidget {
@@ -63,7 +64,9 @@ class AnniversaryScreen extends ConsumerWidget {
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     subtitle: Text(
-                      '${DateFormat('yyyy.MM.dd').format(a.date)} · ${a.type == AnniversaryType.countUp ? '카운트업' : '매년 반복'}',
+                      a.isLunar
+                          ? '음력 ${a.lunarMonth}월 ${a.lunarDay}일 · 매년 반복'
+                          : '${DateFormat('yyyy.MM.dd').format(a.date)} · ${a.type == AnniversaryType.countUp ? '카운트업' : '매년 반복'}',
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -194,6 +197,9 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
   late final TextEditingController _titleController;
   late DateTime _date;
   late AnniversaryType _type;
+  late bool _isLunar;
+  late int _lunarMonth;
+  late int _lunarDay;
 
   @override
   void initState() {
@@ -203,6 +209,61 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
     );
     _date = widget.existing?.date ?? DateUtils.dateOnly(DateTime.now());
     _type = widget.existing?.type ?? AnniversaryType.countUp;
+    _isLunar = widget.existing?.isLunar ?? false;
+    _lunarMonth = widget.existing?.lunarMonth ?? 1;
+    _lunarDay = widget.existing?.lunarDay ?? 1;
+  }
+
+  /// 음력 월·일 고르기. 연도는 매년 반복이라 필요 없다.
+  Future<void> _pickLunar() async {
+    var month = _lunarMonth;
+    var day = _lunarDay;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('음력 날짜'),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              DropdownButton<int>(
+                value: month,
+                items: [
+                  for (var m = 1; m <= 12; m++)
+                    DropdownMenuItem(value: m, child: Text('$m월')),
+                ],
+                onChanged: (v) => setLocal(() => month = v ?? month),
+              ),
+              const SizedBox(width: 16),
+              DropdownButton<int>(
+                value: day,
+                items: [
+                  for (var d = 1; d <= 30; d++)
+                    DropdownMenuItem(value: d, child: Text('$d일')),
+                ],
+                onChanged: (v) => setLocal(() => day = v ?? day),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) {
+      setState(() {
+        _lunarMonth = month;
+        _lunarDay = day;
+      });
+    }
   }
 
   @override
@@ -224,20 +285,28 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
             autofocus: true,
           ),
           const SizedBox(height: 12),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('날짜'),
-            trailing: Text(DateFormat('yyyy.MM.dd').format(_date)),
-            onTap: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: _date,
-                firstDate: DateTime(1990),
-                lastDate: DateTime(2100),
-              );
-              if (picked != null) setState(() => _date = picked);
-            },
-          ),
+          if (_type == AnniversaryType.annual && _isLunar)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('날짜'),
+              trailing: Text('음력 $_lunarMonth월 $_lunarDay일'),
+              onTap: _pickLunar,
+            )
+          else
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('날짜'),
+              trailing: Text(DateFormat('yyyy.MM.dd').format(_date)),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _date,
+                  firstDate: DateTime(1990),
+                  lastDate: DateTime(2100),
+                );
+                if (picked != null) setState(() => _date = picked);
+              },
+            ),
           const SizedBox(height: 4),
           SegmentedButton<AnniversaryType>(
             segments: const [
@@ -253,6 +322,14 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
             selected: {_type},
             onSelectionChanged: (s) => setState(() => _type = s.first),
           ),
+          if (_type == AnniversaryType.annual)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('음력'),
+              subtitle: const Text('음력 생일처럼 매년 음력 날짜로 돌아와요'),
+              value: _isLunar,
+              onChanged: (v) => setState(() => _isLunar = v),
+            ),
         ],
       ),
       actions: [
@@ -269,13 +346,21 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
               ).showSnackBar(const SnackBar(content: Text('제목을 입력하세요')));
               return;
             }
+            final lunar = _type == AnniversaryType.annual && _isLunar;
+            final today = DateUtils.dateOnly(DateTime.now());
             Navigator.pop(
               context,
               AnniversaryModel(
                 id: widget.existing?.id ?? const Uuid().v4(),
                 title: title,
-                date: DateUtils.dateOnly(_date),
+                date: lunar
+                    ? (nextLunarOccurrence(_lunarMonth, _lunarDay, today) ??
+                          today)
+                    : DateUtils.dateOnly(_date),
                 type: _type,
+                isLunar: lunar,
+                lunarMonth: lunar ? _lunarMonth : null,
+                lunarDay: lunar ? _lunarDay : null,
               ),
             );
           },
