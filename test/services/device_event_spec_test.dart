@@ -9,6 +9,7 @@ EventModel _event({
   bool allDay = false,
   String repeat = 'none',
   DateTime? until,
+  List<DateTime> excluded = const [],
 }) {
   return EventModel.fromMap({
     'id': 'ev1',
@@ -26,7 +27,7 @@ EventModel _event({
     'updatedAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
     'repeat': repeat,
     'repeatUntil': until != null ? Timestamp.fromDate(until) : null,
-    'excludedDates': const [],
+    'excludedDates': excluded.map(Timestamp.fromDate).toList(),
   });
 }
 
@@ -96,6 +97,51 @@ void main() {
         ),
       );
       expect(spec.rrule, 'FREQ=DAILY;UNTIL=20260901T235959Z');
+    });
+  });
+
+  group('EXDATE', () {
+    test('반복이 아니거나 제외일이 없으면 null', () {
+      expect(buildDeviceEventSpec(_event(start: DateTime(2026, 7, 1, 9))).exdate, isNull);
+      expect(
+        buildDeviceEventSpec(
+          _event(start: DateTime(2026, 7, 1, 9), repeat: 'weekly'),
+        ).exdate,
+        isNull,
+      );
+    });
+
+    test('시각 일정은 그 회차의 시작 시각(UTC)으로 뺀다', () {
+      final start = DateTime(2026, 7, 1, 9, 30);
+      final spec = buildDeviceEventSpec(
+        _event(
+          start: start,
+          end: DateTime(2026, 7, 1, 10, 30),
+          repeat: 'weekly',
+          excluded: [DateTime(2026, 7, 15), DateTime(2026, 7, 8)],
+        ),
+      );
+      String stamp(DateTime t) {
+        final u = t.toUtc();
+        String two(int v) => v.toString().padLeft(2, '0');
+        return '${u.year}${two(u.month)}${two(u.day)}T${two(u.hour)}${two(u.minute)}00Z';
+      }
+      expect(
+        spec.exdate,
+        '${stamp(DateTime(2026, 7, 8, 9, 30))},${stamp(DateTime(2026, 7, 15, 9, 30))}',
+      );
+    });
+
+    test('종일 일정은 UTC 자정으로 뺀다', () {
+      final spec = buildDeviceEventSpec(
+        _event(
+          start: DateTime(2026, 7, 1),
+          allDay: true,
+          repeat: 'daily',
+          excluded: [DateTime(2026, 7, 3)],
+        ),
+      );
+      expect(spec.exdate, '20260703T000000Z');
     });
   });
 }

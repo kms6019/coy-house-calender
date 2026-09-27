@@ -26,6 +26,9 @@ class DeviceEventSpec {
   final String timeZone;
   final String? rrule;
 
+  /// 반복 중 "이 회차만 삭제"한 회차 (RFC 5545 EXDATE, 쉼표 구분)
+  final String? exdate;
+
   const DeviceEventSpec({
     required this.title,
     required this.description,
@@ -34,6 +37,7 @@ class DeviceEventSpec {
     required this.allDay,
     required this.timeZone,
     required this.rrule,
+    this.exdate,
   });
 }
 
@@ -61,6 +65,27 @@ String? _rrule(EventModel event) {
   return 'FREQ=$freq;UNTIL=$stamp';
 }
 
+String _utcStamp(DateTime t) {
+  final u = t.toUtc();
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${u.year.toString().padLeft(4, '0')}${two(u.month)}${two(u.day)}'
+      'T${two(u.hour)}${two(u.minute)}${two(u.second)}Z';
+}
+
+/// 앱에서 "이 회차만 삭제"한 날짜를 기기 캘린더의 EXDATE 로 옮긴다.
+/// 각 값은 그 회차의 시작 시각과 정확히 같아야 기기에서 빠진다.
+String? _exdate(EventModel event) {
+  if (event.repeat == RepeatRule.none || event.excludedDates.isEmpty) {
+    return null;
+  }
+  final s = event.startDateTime;
+  final stamps = event.excludedDates.map((d) {
+    if (event.isAllDay) return _utcStamp(DateTime.utc(d.year, d.month, d.day));
+    return _utcStamp(DateTime(d.year, d.month, d.day, s.hour, s.minute));
+  }).toSet().toList()..sort();
+  return stamps.join(',');
+}
+
 /// 종일 이벤트는 CalendarProvider 규약상 **UTC 자정**으로 저장해야 날짜가
 /// 하루 밀리지 않는다. 시각 지정 이벤트는 로컬 시간대를 그대로 쓴다.
 DeviceEventSpec buildDeviceEventSpec(EventModel event) {
@@ -80,6 +105,7 @@ DeviceEventSpec buildDeviceEventSpec(EventModel event) {
       allDay: true,
       timeZone: 'UTC',
       rrule: _rrule(event),
+      exdate: _exdate(event),
     );
   }
   return DeviceEventSpec(
@@ -90,5 +116,6 @@ DeviceEventSpec buildDeviceEventSpec(EventModel event) {
     allDay: false,
     timeZone: 'Asia/Seoul',
     rrule: _rrule(event),
+    exdate: _exdate(event),
   );
 }

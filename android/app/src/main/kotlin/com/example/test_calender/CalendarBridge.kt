@@ -331,6 +331,7 @@ class CalendarBridge private constructor(
         val allDay = call.requiredBoolean("allDay")
         val timeZone = call.requiredString("timeZone")
         val rrule = call.argument<String>("rrule")?.takeUnless { it.isEmpty() }
+        val exdate = call.argument<String>("exdate")?.takeUnless { it.isEmpty() }
         val customAppUri = call.argument<String>("customAppUri")
 
         if (dtend < dtstart) {
@@ -349,11 +350,13 @@ class CalendarBridge private constructor(
 
             if (rrule != null) {
                 put(CalendarContract.Events.RRULE, rrule)
+                put(CalendarContract.Events.EXDATE, exdate)
                 // 반복 일정은 DTEND와 DURATION을 함께 둘 수 없어 DTEND를 비우고 길이를 저장한다.
                 putNull(CalendarContract.Events.DTEND)
                 put(CalendarContract.Events.DURATION, toRfc2445Duration(dtend - dtstart, allDay))
             } else {
                 putNull(CalendarContract.Events.RRULE)
+                putNull(CalendarContract.Events.EXDATE)
                 putNull(CalendarContract.Events.DURATION)
                 put(CalendarContract.Events.DTEND, dtend)
             }

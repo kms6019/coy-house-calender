@@ -108,6 +108,7 @@ class NativeCalendarBridge {
     required bool allDay,
     required String timeZone,
     String? rrule,
+    String? exdate,
     String? customAppUri,
   }) => _channel.invokeMethod<String>('upsertEvent', {
     'calendarId': calendarId,
@@ -119,6 +120,7 @@ class NativeCalendarBridge {
     'allDay': allDay,
     'timeZone': timeZone,
     'rrule': rrule,
+    'exdate': exdate,
     'customAppUri': customAppUri,
   });
 

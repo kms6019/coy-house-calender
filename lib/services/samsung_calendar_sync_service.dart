@@ -323,6 +323,7 @@ class SamsungCalendarSyncService {
         allDay: spec.allDay,
         timeZone: spec.timeZone,
         rrule: spec.rrule,
+        exdate: spec.exdate,
         customAppUri: coyEventMarker(event.id),
       );
       if (id == null) return '이벤트 ID를 반환하지 않음';

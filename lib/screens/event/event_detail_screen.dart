@@ -510,7 +510,7 @@ class EventDetailScreen extends ConsumerWidget {
       return;
     }
 
-    // 이 회차만: excludedDates에 추가 (삼성캘린더 미반영 — v1 한계)
+    // 이 회차만: excludedDates에 추가 (삼성캘린더에는 EXDATE 로 반영)
     final day = calendarDateKey(occurrenceDate ?? event.startDateTime);
     final updated = master.copyWithRepeat(
       repeat: master.repeat,
