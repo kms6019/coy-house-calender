@@ -109,7 +109,10 @@ class _AgendaRow extends StatelessWidget {
     ].join(' · ');
 
     return InkWell(
-      onTap: () => context.push('/event/detail', extra: event),
+      // 기념일은 실제 일정이 아니라 기념일 관리 화면으로 보낸다
+      onTap: () => event.id.startsWith('anniversary-')
+          ? context.push('/settings/anniversaries')
+          : context.push('/event/detail', extra: event),
       child: Container(
         padding: const EdgeInsets.fromLTRB(0, 12, 8, 12),
         decoration: BoxDecoration(

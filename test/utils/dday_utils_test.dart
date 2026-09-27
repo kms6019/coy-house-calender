@@ -110,4 +110,18 @@ void main() {
       expect(anniversaryEventsForMonth([a], DateTime(2026, 3)), isEmpty);
     });
   });
+
+  group('anniversaryEventsForDay', () {
+    test('매년 기념일은 그 날짜에만 나온다', () {
+      final a = _ann('annual', DateTime(1995, 10, 24));
+      expect(anniversaryEventsForDay([a], DateTime(2026, 10, 24)).length, 1);
+      expect(anniversaryEventsForDay([a], DateTime(2026, 10, 23)), isEmpty);
+    });
+
+    test('목록에서 기념일로 알아볼 수 있는 id 를 쓴다', () {
+      final a = _ann('annual', DateTime(1995, 10, 24));
+      final e = anniversaryEventsForDay([a], DateTime(2026, 10, 24)).single;
+      expect(e.id.startsWith('anniversary-'), isTrue);
+    });
+  });
 }

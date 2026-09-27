@@ -173,7 +173,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             },
                             child: AgendaList(
                               day: selectedDay,
-                              events: eventsForDay(allEvents, selectedDay),
+                              // 달력 칸에 찍히는 기념일도 그날 목록에 함께 보여 준다
+                              events: [
+                                ...anniversaryEventsForDay(
+                                  coupleAsync.valueOrNull?.anniversaries ??
+                                      const [],
+                                  selectedDay,
+                                ),
+                                ...eventsForDay(allEvents, selectedDay),
+                              ],
                               holidayName: koreanHolidayNameForDate(
                                 groupKoreanHolidaysByDate(holidays),
                                 selectedDay,

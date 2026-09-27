@@ -78,3 +78,11 @@ List<EventModel> anniversaryEventsForMonth(
   }
   return result;
 }
+
+/// 그날 하루에 해당하는 기념일 가상 이벤트 (선택일 일정 목록용).
+List<EventModel> anniversaryEventsForDay(
+    List<AnniversaryModel> anniversaries, DateTime day) {
+  return anniversaryEventsForMonth(anniversaries, day)
+      .where((e) => DateUtils.isSameDay(e.startDateTime, day))
+      .toList();
+}
