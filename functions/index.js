@@ -4,7 +4,8 @@ const admin = require("firebase-admin");
 
 admin.initializeApp();
 
-// 과금 가드: 인스턴스 상한 + 최소 메모리. 함수는 Firestore에 쓰지 않음(무한 트리거 불가)
+// 과금 가드: 인스턴스 상한 + 최소 메모리. 함수는 events 에 쓰지 않음(무한 트리거 불가) —
+// 쓰는 곳은 users/{uid}/notificationHistory 뿐이다.
 setGlobalOptions({
   region: "asia-northeast3",
   maxInstances: 2,
@@ -61,6 +62,24 @@ function formatStart(timestamp, isAllDay) {
   return isAllDay ? `${base} 종일` : `${base} ${get("hour")}:${get("minute")}`;
 }
 
+const MAX_HISTORY = 50;
+
+async function recordHistory(db, uid, entry) {
+  const col = db.collection("users").doc(uid).collection("notificationHistory");
+  await col.add({
+    ...entry,
+    receivedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  const old = await col
+    .orderBy("receivedAt", "desc")
+    .offset(MAX_HISTORY)
+    .get();
+  if (old.empty) return;
+  const batch = db.batch();
+  old.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+}
+
 async function sendToPartner(event, eventId, actorUid, notificationTitle) {
   const db = admin.firestore();
 
@@ -80,9 +99,6 @@ async function sendToPartner(event, eventId, actorUid, notificationTitle) {
     db.collection("users").doc(partnerUid).get(),
     db.collection("users").doc(actorUid).get(),
   ]);
-  const fcmToken = partnerSnap.data()?.fcmToken ?? "";
-  if (!fcmToken) return;
-
   const actorName = (actorSnap.data()?.displayName ?? "").trim() || "상대방";
   const title = (event.title ?? "").trim() || "(제목 없음)";
   const when = event.startDateTime
@@ -92,14 +108,24 @@ async function sendToPartner(event, eventId, actorUid, notificationTitle) {
   const notifTitle = `${actorName}님이 ${notificationTitle}`;
   const notifBody = when ? `${title} · ${when}` : title;
 
+  // 알림 기록은 서버가 남긴다. 수신 기기의 백그라운드 핸들러는 삼성 배터리
+  // 최적화 등으로 안 도는 경우가 많아 기록이 계속 누락됐다.
+  await recordHistory(db, partnerUid, {
+    title: notifTitle,
+    body: notifBody,
+    eventId: eventId ?? "",
+  });
+
+  const fcmToken = partnerSnap.data()?.fcmToken ?? "";
+  if (!fcmToken) return;
+
   await admin.messaging().send({
     token: fcmToken,
     notification: {
       title: notifTitle,
       body: notifBody,
     },
-    // 수신 기기가 백그라운드에서 캘린더/위젯 동기화를 돌리고, 알림 기록에 남기도록
-    // 데이터 페이로드에 eventId/title/body를 함께 보낸다.
+    // 수신 기기가 백그라운드에서 캘린더/위젯 동기화를 돌리도록 데이터 페이로드를 함께 보낸다.
     data: {
       type: "event_sync",
       eventId: eventId ?? "",

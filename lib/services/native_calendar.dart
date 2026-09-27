@@ -81,6 +81,13 @@ class NativeCalendarBridge {
       }) ??
       0;
 
+  /// 로컬 캘린더 하나를 id 로 삭제. 로컬이 아니거나 없으면 false.
+  static Future<bool> deleteCalendar(String calendarId) async =>
+      await _channel.invokeMethod<bool>('deleteCalendar', {
+        'calendarId': calendarId,
+      }) ??
+      false;
+
   static Future<List<NativeEvent>> queryEvents(String calendarId) async {
     final raw = await _channel.invokeListMethod<dynamic>('queryEvents', {
       'calendarId': calendarId,

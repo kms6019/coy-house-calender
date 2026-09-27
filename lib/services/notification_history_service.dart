@@ -15,19 +15,6 @@ class NotificationHistoryEntry {
     this.receivedAt,
   });
 
-  /// FCM data 페이로드(문자열 맵)에서 알림기록 항목을 만든다.
-  /// event_sync 타입이 아니거나 eventId가 없으면 기록하지 않는다(null).
-  static NotificationHistoryEntry? fromFcmData(Map<String, dynamic> data) {
-    if (data['type'] != 'event_sync') return null;
-    final eventId = data['eventId'] as String? ?? '';
-    if (eventId.isEmpty) return null;
-    return NotificationHistoryEntry(
-      title: data['title'] as String? ?? '',
-      body: data['body'] as String? ?? '',
-      eventId: eventId,
-    );
-  }
-
   factory NotificationHistoryEntry.fromDoc(String id, Map<String, dynamic> map) {
     return NotificationHistoryEntry(
       id: id,
@@ -37,44 +24,15 @@ class NotificationHistoryEntry {
       receivedAt: (map['receivedAt'] as Timestamp?)?.toDate(),
     );
   }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'body': body,
-      'eventId': eventId,
-      'receivedAt': FieldValue.serverTimestamp(),
-    };
-  }
 }
 
+/// 파트너 알림 기록 — Cloud Function(sendToPartner)이 쓰고 앱은 읽기만 한다.
 class NotificationHistoryService {
-  static const _maxEntries = 50;
-
   final FirebaseFirestore _db;
   NotificationHistoryService({FirebaseFirestore? db}) : _db = db ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> _collection(String uid) =>
       _db.collection('users').doc(uid).collection('notificationHistory');
-
-  Future<void> record(String uid, NotificationHistoryEntry entry) async {
-    await _collection(uid).add(entry.toMap());
-
-    final snap = await _collection(uid)
-        .orderBy('receivedAt', descending: true)
-        .get();
-    // serverTimestamp 미확정(null) 문서는 내림차순 정렬에서 맨 뒤로 밀려
-    // 방금 기록한 항목이 오래된 것으로 오인돼 삭제될 수 있다 → 정리 대상에서 제외.
-    final settled = snap.docs
-        .where((d) => d.data()['receivedAt'] != null)
-        .toList();
-    if (settled.length <= _maxEntries) return;
-    final batch = _db.batch();
-    for (final doc in settled.skip(_maxEntries)) {
-      batch.delete(doc.reference);
-    }
-    await batch.commit();
-  }
 
   Stream<List<NotificationHistoryEntry>> streamFor(String uid) {
     return _collection(uid)

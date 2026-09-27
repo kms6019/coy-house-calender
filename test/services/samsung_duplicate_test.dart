@@ -1,4 +1,5 @@
 import 'package:coy_house_calender/services/device_calendar_event_builder.dart';
+import 'package:coy_house_calender/services/native_calendar.dart';
 import 'package:coy_house_calender/services/samsung_calendar_sync_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -127,6 +128,43 @@ void main() {
         _e('2', marker: 'B', key: '출근|100'),
       ], const {});
       expect(doomed, isEmpty);
+    });
+  });
+
+  group('앱 캘린더 하나만 남기기', () {
+    NativeCalendar c(String id, {String name = 'CoyHouseCalender', bool local = true}) =>
+        NativeCalendar(id: id, name: name, accountName: name, isLocal: local);
+
+    test('4개 쌓였으면 캐시된 것만 남기고 나머지를 지운다', () {
+      final pick = pickAppCalendar(
+        [c('3'), c('7'), c('9'), c('12')],
+        'CoyHouseCalender',
+        '9',
+      );
+      expect(pick.keep, '9');
+      expect(pick.extras, ['3', '7', '12']);
+    });
+
+    test('캐시가 없거나 사라졌으면 id 가 가장 작은 것을 남긴다', () {
+      final pick = pickAppCalendar([c('3'), c('7')], 'CoyHouseCalender', '99');
+      expect(pick.keep, '3');
+      expect(pick.extras, ['7']);
+    });
+
+    test('다른 이름·로컬이 아닌 캘린더는 건드리지 않는다', () {
+      final pick = pickAppCalendar(
+        [c('1', name: '개인'), c('2', local: false), c('5')],
+        'CoyHouseCalender',
+        null,
+      );
+      expect(pick.keep, '5');
+      expect(pick.extras, isEmpty);
+    });
+
+    test('하나도 없으면 keep 이 null', () {
+      final pick = pickAppCalendar([c('1', name: '개인')], 'CoyHouseCalender', null);
+      expect(pick.keep, isNull);
+      expect(pick.extras, isEmpty);
     });
   });
 }

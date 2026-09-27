@@ -78,6 +78,25 @@ List<String> duplicateDeviceEventIdsToDelete(
   return doomed;
 }
 
+/// 앱 캘린더가 여러 개 쌓여 있으면 하나만 남긴다.
+///
+/// 옛 플러그인 시절에 같은 이름의 캘린더가 4개까지 생겼고, 앱은 그중 하나만
+/// 동기화하므로 나머지에 남은 사본이 삼성캘린더에 그대로 겹쳐 보였다.
+/// 캐시된 캘린더가 살아 있으면 그것을, 아니면 id 가 가장 작은 것을 남긴다.
+({String? keep, List<String> extras}) pickAppCalendar(
+  List<NativeCalendar> calendars,
+  String name,
+  String? cachedId,
+) {
+  final mine = calendars.where((c) => c.isLocal && c.name == name).toList();
+  if (mine.isEmpty) return (keep: null, extras: const []);
+  final keep = mine.any((c) => c.id == cachedId) ? cachedId! : mine.first.id;
+  return (
+    keep: keep,
+    extras: mine.map((c) => c.id).where((id) => id != keep).toList(),
+  );
+}
+
 /// 커플 일정을 기기(삼성) 캘린더에 미러링한다.
 ///
 /// device_calendar 플러그인이 대상 기기에서 캘린더 정보를 전부 null 로 돌려주고
@@ -117,9 +136,16 @@ class SamsungCalendarSyncService {
 
   Future<String?> _ensureCalendarExists() async {
     if (!await _ensurePermission()) return null;
-    final cached = await _mapping.getCalendarId();
-    if (cached != null) return cached;
-    final id = await NativeCalendarBridge.ensureCalendar(_calendarName);
+    final pick = pickAppCalendar(
+      await NativeCalendarBridge.queryCalendars(),
+      _calendarName,
+      await _mapping.getCalendarId(),
+    );
+    for (final extra in pick.extras) {
+      await NativeCalendarBridge.deleteCalendar(extra);
+    }
+    final id =
+        pick.keep ?? await NativeCalendarBridge.ensureCalendar(_calendarName);
     if (id != null) await _mapping.setCalendarId(id);
     return id;
   }

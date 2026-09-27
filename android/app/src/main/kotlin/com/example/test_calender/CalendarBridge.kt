@@ -48,6 +48,17 @@ class CalendarBridge private constructor(
                 deleteCalendarsByName(call.requiredString("name"))
             }
 
+            "deleteCalendar" -> execute(
+                result = result,
+                permissions = arrayOf(
+                    Manifest.permission.READ_CALENDAR,
+                    Manifest.permission.WRITE_CALENDAR,
+                ),
+                errorCode = "DELETE_CALENDAR_FAILED",
+            ) {
+                deleteCalendar(call.requiredString("calendarId"))
+            }
+
             "queryEvents" -> execute(
                 result = result,
                 permissions = arrayOf(Manifest.permission.READ_CALENDAR),
@@ -210,20 +221,52 @@ class CalendarBridge private constructor(
 
         var deletedCount = 0
         for (target in targets) {
-            val calendarUri = ContentUris.withAppendedId(
-                CalendarContract.Calendars.CONTENT_URI,
-                target.id,
-            )
-            // 일반 delete는 일부 제조사 캘린더에서 삭제 플래그만 남길 수 있어 실제 제거용 URI를 쓴다.
-            val syncAdapterUri = asSyncAdapter(
-                calendarUri,
-                accountName = target.accountName,
-                accountType = target.accountType,
-            )
-            deletedCount += contentResolver.delete(syncAdapterUri, null, null)
+            deletedCount += deleteCalendarRow(target)
         }
 
         return deletedCount
+    }
+
+    /** id 로 로컬 캘린더 하나를 지운다. 지웠으면 true. */
+    private fun deleteCalendar(calendarId: String): Boolean {
+        val id = calendarId.toLongOrNull()
+            ?: throw IllegalArgumentException("calendarId는 숫자 문자열이어야 합니다.")
+        val projection = arrayOf(
+            CalendarContract.Calendars.ACCOUNT_NAME,
+            CalendarContract.Calendars.ACCOUNT_TYPE,
+        )
+        val target = contentResolver.query(
+            ContentUris.withAppendedId(CalendarContract.Calendars.CONTENT_URI, id),
+            projection,
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            CalendarToDelete(
+                id = id,
+                accountName = cursor.getString(0).orEmpty(),
+                accountType = cursor.getString(1).orEmpty(),
+            )
+        } ?: return false
+
+        // 다른 계정(구글·삼성 계정) 캘린더는 절대 건드리지 않는다.
+        if (target.accountType != CalendarContract.ACCOUNT_TYPE_LOCAL) return false
+        return deleteCalendarRow(target) > 0
+    }
+
+    private fun deleteCalendarRow(target: CalendarToDelete): Int {
+        val calendarUri = ContentUris.withAppendedId(
+            CalendarContract.Calendars.CONTENT_URI,
+            target.id,
+        )
+        // 일반 delete는 일부 제조사 캘린더에서 삭제 플래그만 남길 수 있어 실제 제거용 URI를 쓴다.
+        val syncAdapterUri = asSyncAdapter(
+            calendarUri,
+            accountName = target.accountName,
+            accountType = target.accountType,
+        )
+        return contentResolver.delete(syncAdapterUri, null, null)
     }
 
     private fun queryEvents(calendarId: String): List<Map<String, Any?>> {
