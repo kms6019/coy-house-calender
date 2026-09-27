@@ -1,9 +1,20 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // 후기 사진 reviews/{eventId}.jpg — 그 일정을 가진 커플의 두 사람만.
+    // (다운로드 URL 토큰으로 보는 표시는 규칙과 무관하게 계속 동작한다)
+    function isEventMember(fileName) {
+      let eventId = fileName.split('[.]')[0];
+      let ev = firestore.get(/databases/(default)/documents/events/$(eventId));
+      let couple = firestore.get(/databases/(default)/documents/couples/$(ev.data.coupleId));
+      return couple.data.ownerUid == request.auth.uid
+        || couple.data.partnerUid == request.auth.uid;
+    }
+
     match /reviews/{fileName} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && isEventMember(fileName);
       allow write: if request.auth != null
+        && isEventMember(fileName)
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
