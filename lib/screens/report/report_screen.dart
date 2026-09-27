@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
+import '../../theme/design_tokens.dart';
 import '../../utils/report_utils.dart';
 import '../../widgets/app_surface.dart';
 
@@ -62,18 +62,15 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         onPrevious: () => _moveMonth(-1),
                         onNext: () => _moveMonth(1),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 22),
                       _EventReportCard(
                         totalEvents: report.totalEvents,
                         myEvents: report.myEvents,
                         partnerEvents: report.partnerEvents,
                         allDayEvents: report.allDayEvents,
                       ),
-                      if (report.topIcon != null) ...[
-                        const SizedBox(height: 14),
+                      if (report.topIcon != null)
                         _TopIconReportCard(topIcon: report.topIcon!),
-                      ],
-                      const SizedBox(height: 14),
                       _WishReportCard(
                         done: report.wishesDone,
                         total: report.wishesTotal,
@@ -87,6 +84,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   }
 }
 
+/// 월 이동. 큰 숫자는 아래 합계 하나에만 쓴다.
 class _MonthSelector extends StatelessWidget {
   final DateTime month;
   final VoidCallback onPrevious;
@@ -100,40 +98,32 @@ class _MonthSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: '이전 달',
-            icon: const Icon(Icons.chevron_left),
-            color: colors.onPrimaryContainer,
-            onPressed: onPrevious,
+    final t = DesignTokens.of(context);
+    return Row(
+      children: [
+        Text(
+          '${month.year}년 ${month.month}월',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.4,
+            color: t.ink,
           ),
-          Expanded(
-            child: Text(
-              DateFormat('yyyy년 M월').format(month),
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: colors.onPrimaryContainer,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: '다음 달',
-            icon: const Icon(Icons.chevron_right),
-            color: colors.onPrimaryContainer,
-            onPressed: onNext,
-          ),
-        ],
-      ),
+        ),
+        const Spacer(),
+        IconButton(
+          tooltip: '이전 달',
+          icon: const Icon(Icons.chevron_left),
+          color: t.ink70,
+          onPressed: onPrevious,
+        ),
+        IconButton(
+          tooltip: '다음 달',
+          icon: const Icon(Icons.chevron_right),
+          color: t.ink70,
+          onPressed: onNext,
+        ),
+      ],
     );
   }
 }
@@ -153,67 +143,61 @@ class _EventReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
+    final t = DesignTokens.of(context);
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: colors.secondaryContainer,
-            borderRadius: BorderRadius.circular(26),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.auto_awesome, color: colors.onSecondaryContainer),
-              const SizedBox(height: 12),
-              Text(
-                '이번 달 함께 만든 일정',
-                style: textTheme.bodyLarge?.copyWith(
-                  color: colors.onSecondaryContainer,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '$totalEvents건',
-                style: textTheme.headlineLarge?.copyWith(
-                  color: colors.onSecondaryContainer,
-                ),
-              ),
-            ],
-          ),
+        Text(
+          '이번 달 함께 만든 일정',
+          style: TextStyle(fontSize: 13, color: t.ink45),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
-            Expanded(
-              child: _ReportStat(
-                icon: Icons.person_outline,
-                label: '내 일정',
-                value: '$myEvents',
+            Text(
+              '$totalEvents',
+              style: TextStyle(
+                fontSize: 80,
+                height: 0.95,
+                fontWeight: FontWeight.w200,
+                letterSpacing: -3.5,
+                color: t.ink,
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _ReportStat(
-                icon: Icons.favorite_outline,
-                label: '상대 일정',
-                value: '$partnerEvents',
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _ReportStat(
-                icon: Icons.wb_sunny_outlined,
-                label: '종일 일정',
-                value: '$allDayEvents',
+            const SizedBox(width: 6),
+            Text(
+              '건',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: t.ink,
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 22),
+        Container(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: t.line)),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: _ReportStat(label: '내 일정', value: myEvents)),
+                Container(width: 1, color: t.hairline),
+                Expanded(
+                  child: _ReportStat(label: '상대 일정', value: partnerEvents),
+                ),
+                Container(width: 1, color: t.hairline),
+                Expanded(
+                  child: _ReportStat(label: '종일 일정', value: allDayEvents),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -221,38 +205,76 @@ class _EventReportCard extends StatelessWidget {
 }
 
 class _ReportStat extends StatelessWidget {
-  const _ReportStat({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _ReportStat({required this.label, required this.value});
 
-  final IconData icon;
   final String label;
-  final String value;
+  final int value;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-        child: Column(
-          children: [
-            Icon(icon, color: colors.primary),
-            const SizedBox(height: 8),
-            Text(value, style: theme.textTheme.titleLarge),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              maxLines: 1,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
+    final t = DesignTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
+      child: Column(
+        children: [
+          Text(
+            '$value',
+            style: TextStyle(
+              fontSize: 28,
+              height: 1,
+              fontWeight: FontWeight.w300,
+              letterSpacing: -0.8,
+              color: t.ink,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            maxLines: 1,
+            style: TextStyle(fontSize: 12, color: t.ink45),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 라벨 왼쪽, 값 오른쪽의 한 줄. 위쪽 가는 선으로 구분.
+class _ReportLine extends StatelessWidget {
+  final String label;
+  final Widget trailing;
+  final Widget? below;
+
+  const _ReportLine({required this.label, required this.trailing, this.below});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = DesignTokens.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: t.hairline)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.2,
+                    color: t.ink,
+                  ),
+                ),
+              ),
+              trailing,
+            ],
+          ),
+          if (below != null) ...[const SizedBox(height: 12), below!],
+        ],
       ),
     );
   }
@@ -265,33 +287,9 @@ class _TopIconReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: colors.tertiaryContainer,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Text(topIcon, style: const TextStyle(fontSize: 38)),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '이번 달 최애 아이콘',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return _ReportLine(
+      label: '가장 많이 쓴 아이콘',
+      trailing: Text(topIcon, style: const TextStyle(fontSize: 26)),
     );
   }
 }
@@ -304,35 +302,28 @@ class _WishReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final t = DesignTokens.of(context);
     final progress = total == 0 ? 0.0 : done / total;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('위시리스트 완료 $done / $total', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 12),
-            LinearProgressIndicator(
-              value: progress,
-              minHeight: 10,
-              borderRadius: BorderRadius.circular(99),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              total == 0
-                  ? '첫 번째 위시를 추가해 보세요.'
-                  : '${(progress * 100).round()}% 완료',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-          ],
+    return _ReportLine(
+      label: '위시리스트 완료',
+      trailing: Text(
+        total == 0 ? '첫 위시를 추가해 보세요' : '$done / $total',
+        style: TextStyle(
+          fontSize: total == 0 ? 13 : 15,
+          fontWeight: FontWeight.w600,
+          color: total == 0 ? t.ink45 : t.ink,
         ),
       ),
+      below: total == 0
+          ? null
+          : LinearProgressIndicator(
+              value: progress,
+              minHeight: 3,
+              color: t.ink,
+              backgroundColor: t.fill,
+              borderRadius: BorderRadius.circular(99),
+            ),
     );
   }
 }

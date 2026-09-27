@@ -30,8 +30,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final eventsAsync = ref.watch(eventsStreamProvider);
     final myUid = ref.watch(authStateProvider).valueOrNull?.uid ?? '';
     final query = _queryCtrl.text.trim();
@@ -74,7 +72,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Divider(color: colors.outlineVariant.withValues(alpha: 0.5)),
+            const Divider(),
             const SizedBox(height: 4),
             Expanded(
               child: AnimatedSwitcher(

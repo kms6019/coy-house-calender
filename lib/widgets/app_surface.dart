@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/design_tokens.dart';
 
 /// 화면별 콘텐츠 폭과 기본 가로 여백을 통일한다.
 class AppPageBody extends StatelessWidget {
@@ -64,8 +65,8 @@ class AppSectionHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 19, color: theme.colorScheme.primary),
-            const SizedBox(width: 9),
+            Icon(icon, size: 17, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 8),
           ],
           Expanded(
             child: Column(
@@ -104,21 +105,20 @@ class AppIconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    // 색 배지 대신 캘린더 화면처럼 옅은 채움 위 먹색 아이콘. 강조일 때만 accent.
+    final t = DesignTokens.of(context);
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: emphasized
-            ? colors.primaryContainer
-            : colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(size * 0.34),
+        color: t.fill,
+        borderRadius: BorderRadius.circular(size * 0.3),
       ),
       child: Icon(
         icon,
-        size: size * 0.5,
-        color: emphasized ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+        size: size * 0.46,
+        color: emphasized ? t.accent : t.ink70,
       ),
     );
   }

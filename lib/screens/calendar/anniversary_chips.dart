@@ -28,9 +28,7 @@ class AnniversaryChips extends StatelessWidget {
             decoration: BoxDecoration(
               color: colors.surface.withValues(alpha: 0.72),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: colors.outlineVariant.withValues(alpha: 0.44),
-              ),
+              border: Border.all(color: colors.outlineVariant),
             ),
             child: Row(
               children: [

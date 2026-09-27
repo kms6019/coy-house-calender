@@ -12,6 +12,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/samsung_calendar_sync_service.dart';
+import '../../theme/design_tokens.dart';
 import '../../utils/event_utils.dart';
 import '../../widgets/app_surface.dart';
 
@@ -50,7 +51,7 @@ class EventDetailScreen extends ConsumerWidget {
         title: const Text('일정 상세'),
         actions: [
           if (isOwner) ...[
-            IconButton.filledTonal(
+            IconButton(
               tooltip: '일정 수정',
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => context.push('/event/edit', extra: master),
@@ -67,138 +68,20 @@ class EventDetailScreen extends ConsumerWidget {
       body: AppPageBody(
         child: ListView(
           children: [
-            AppSectionCard(
-              padding: const EdgeInsets.all(22),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 54,
-                    height: 54,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: event.colorValue.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: event.colorValue.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: event.icon == null
-                        ? Container(
-                            width: 14,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              color: event.colorValue,
-                              shape: BoxShape.circle,
-                            ),
-                          )
-                        : Text(
-                            event.icon!,
-                            style: const TextStyle(fontSize: 27),
-                          ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(event.title, style: theme.textTheme.headlineSmall),
-                        if (event.isShared || event.isProposed) ...[
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 7,
-                            runSpacing: 7,
-                            children: [
-                              if (event.isShared)
-                                const _StatusPill(
-                                  icon: Icons.favorite,
-                                  label: '함께하는 일정',
-                                ),
-                              if (event.isProposed)
-                                const _StatusPill(
-                                  icon: Icons.send_outlined,
-                                  label: '제안된 일정',
-                                  secondary: true,
-                                ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
+            _DetailHeader(event: event),
+            const SizedBox(height: 22),
+            if (master.repeat != RepeatRule.none)
+              _InfoRow(label: '반복', value: _repeatText(master)),
+            if (event.hasAlarm)
+              _InfoRow(
+                label: '알림',
+                value: event.alarmMinutesBefore == 0
+                    ? '시작 시'
+                    : '${event.alarmMinutesBefore}분 전',
               ),
-            ),
-            const SizedBox(height: 14),
-            AppSectionCard(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-              child: Column(
-                children: [
-                  _InfoRow(
-                    icon: Icons.calendar_today_outlined,
-                    label: '날짜',
-                    value: DateFormat(
-                      'yyyy년 M월 d일 (E)',
-                      'ko_KR',
-                    ).format(event.startDateTime),
-                  ),
-                  if (!event.isAllDay) ...[
-                    const Divider(indent: 54),
-                    _InfoRow(
-                      icon: Icons.access_time_outlined,
-                      label: '시간',
-                      value: event.endDateTime != null
-                          ? '${DateFormat('HH:mm').format(event.startDateTime)} ~ ${DateFormat('HH:mm').format(event.endDateTime!)}'
-                          : DateFormat('HH:mm').format(event.startDateTime),
-                    ),
-                  ],
-                  if (event.isAllDay) ...[
-                    const Divider(indent: 54),
-                    const _InfoRow(
-                      icon: Icons.wb_sunny_outlined,
-                      label: '시간',
-                      value: '종일',
-                    ),
-                  ],
-                  if (master.repeat != RepeatRule.none) ...[
-                    const Divider(indent: 54),
-                    _InfoRow(
-                      icon: Icons.repeat,
-                      label: '반복',
-                      value: _repeatText(master),
-                    ),
-                  ],
-                  if (event.hasAlarm) ...[
-                    const Divider(indent: 54),
-                    _InfoRow(
-                      icon: Icons.notifications_outlined,
-                      label: '알림',
-                      value: event.alarmMinutesBefore == 0
-                          ? '시작 시'
-                          : '${event.alarmMinutesBefore}분 전',
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (event.description != null && event.description!.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              AppSectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const AppSectionHeader(
-                      title: '메모',
-                      icon: Icons.notes_outlined,
-                    ),
-                    Text(
-                      event.description!,
-                      style: theme.textTheme.bodyLarge?.copyWith(height: 1.55),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            if (event.description != null && event.description!.isNotEmpty)
+              _InfoRow(label: '메모', value: event.description!),
+            Container(height: 1, color: DesignTokens.of(context).hairline),
             if (master.reviewText == null && master.reviewPhotoUrl == null) ...[
               const SizedBox(height: 14),
               OutlinedButton.icon(
@@ -569,77 +452,148 @@ class EventDetailScreen extends ConsumerWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+/// 캘린더 아젠다와 같은 문법: 일정 색 세로 룰 + 제목, 초대형 가는 날짜 숫자.
+class _DetailHeader extends StatelessWidget {
+  final EventModel event;
+  const _DetailHeader({required this.event});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: AppIconBadge(icon: icon),
-      title: Text(
-        label,
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: colors.onSurfaceVariant,
-        ),
-      ),
-      subtitle: Text(
-        value,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          color: colors.onSurface,
-          fontWeight: FontWeight.w600,
-        ),
+    final t = DesignTokens.of(context);
+    final start = event.startDateTime;
+    final end = event.endDateTime;
+    final timeFmt = DateFormat('HH:mm');
+    final String when;
+    if (event.isAllDay) {
+      final multiDay = end != null && !DateUtils.isSameDay(start, end);
+      when = multiDay
+          ? '종일 · ${DateFormat('M월 d일', 'ko_KR').format(end)}까지'
+          : '종일';
+    } else {
+      when = end != null
+          ? '${timeFmt.format(start)} – ${timeFmt.format(end)}'
+          : timeFmt.format(start);
+    }
+    final tags = [
+      if (event.isShared) '함께하는 일정',
+      if (event.isProposed) '제안된 일정',
+    ];
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(width: 3, color: event.colorValue),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  [if (event.icon?.isNotEmpty == true) event.icon!, event.title]
+                      .join(' '),
+                  style: TextStyle(
+                    fontSize: 24,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.7,
+                    color: t.ink,
+                  ),
+                ),
+                if (tags.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    tags.join(' · '),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: t.accent,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${start.day}',
+                      style: TextStyle(
+                        fontSize: 44,
+                        height: 0.92,
+                        fontWeight: FontWeight.w200,
+                        letterSpacing: -1.98,
+                        color: t.ink,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          DateFormat('yyyy년 M월 · EEEE', 'ko_KR').format(start),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: t.ink45,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          when,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.3,
+                            color: t.ink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({
-    required this.icon,
-    required this.label,
-    this.secondary = false,
-  });
-
-  final IconData icon;
+/// 라벨 · 값 한 줄. 위쪽 가는 선으로만 구분한다.
+class _InfoRow extends StatelessWidget {
   final String label;
-  final bool secondary;
+  final String value;
+  const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final background = secondary
-        ? colors.tertiaryContainer
-        : colors.primaryContainer;
-    final foreground = secondary
-        ? colors.onTertiaryContainer
-        : colors.onPrimaryContainer;
+    final t = DesignTokens.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(99),
+        border: Border(top: BorderSide(color: t.hairline)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 14, color: foreground),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: foreground,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+          SizedBox(
+            width: 56,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 13, height: 1.5, color: t.ink45),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.45,
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.2,
+                color: t.ink,
+              ),
             ),
           ),
         ],
