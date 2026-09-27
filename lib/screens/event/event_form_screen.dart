@@ -12,15 +12,30 @@ import '../../theme/event_icons.dart';
 import '../../utils/conflict_utils.dart';
 import '../../widgets/app_surface.dart';
 
+/// 반복 일정의 한 회차만 고칠 때 넘기는 값.
+class EventOccurrenceEditArgs {
+  final EventModel master;
+  final EventModel occurrence; // 그 회차의 복사본 (시작 시각이 그 날짜)
+  const EventOccurrenceEditArgs({
+    required this.master,
+    required this.occurrence,
+  });
+}
+
 class EventFormScreen extends ConsumerStatefulWidget {
   final EventModel? event;
   final DateTime? initialDate;
   final String? initialTitle;
+
+  /// 값이 있으면 "이 일정만 수정": [event] 는 그 회차 복사본이고, 저장하면
+  /// 반복에서 그 날을 빼고 단일 일정으로 새로 만든다.
+  final EventModel? seriesMaster;
   const EventFormScreen({
     super.key,
     this.event,
     this.initialDate,
     this.initialTitle,
+    this.seriesMaster,
   });
 
   @override
@@ -75,8 +90,13 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       _isAllDay = widget.event!.isAllDay;
       _hasAlarm = widget.event!.hasAlarm;
       _alarmMinutes = widget.event!.alarmMinutesBefore;
-      _repeat = widget.event!.repeat;
-      _repeatUntil = widget.event!.repeatUntil;
+      // 한 회차만 고칠 때는 반복 없는 단일 일정이 된다
+      _repeat = widget.seriesMaster != null
+          ? RepeatRule.none
+          : widget.event!.repeat;
+      _repeatUntil = widget.seriesMaster != null
+          ? null
+          : widget.event!.repeatUntil;
       _color = widget.event!.color;
       _icon = widget.event!.icon;
       if (widget.event!.endDateTime != null) {
@@ -217,9 +237,11 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
 
     try {
       final fs = ref.read(firestoreServiceProvider);
+      final master = widget.seriesMaster;
       EventModel saved;
+      EventModel? updatedMaster;
 
-      if (widget.event == null) {
+      if (widget.event == null || master != null) {
         final draft = EventModel(
           id: '',
           coupleId: coupleId,
@@ -240,9 +262,22 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           repeatUntil: _repeat == RepeatRule.none ? null : _repeatUntil,
           icon: _icon,
           isShared: _isShared,
-          status: _propose ? 'proposed' : 'confirmed',
+          status: master != null
+              ? master.status
+              : (_propose ? 'proposed' : 'confirmed'),
         );
+        // 새 단일 일정을 먼저 만든 뒤 반복에서 그 날을 뺀다 — 중간에 실패해도
+        // 일정이 사라지지 않고 잠시 겹칠 뿐이다.
         saved = await fs.addEvent(draft);
+        if (master != null) {
+          final day = DateUtils.dateOnly(widget.event!.startDateTime);
+          updatedMaster = master.copyWithRepeat(
+            repeat: master.repeat,
+            repeatUntil: master.repeatUntil,
+            excludedDates: {...master.excludedDates, day}.toList(),
+          );
+          await fs.updateEvent(updatedMaster, editorUid: authUid);
+        }
       } else {
         saved = widget.event!.copyWith(
           title: _titleCtrl.text.trim(),
@@ -269,12 +304,15 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       }
 
       final calendarSync = SamsungCalendarSyncService();
-      if (widget.event == null) {
+      if (widget.event == null || master != null) {
         if (!saved.isProposed) {
           await calendarSync.syncEventCreate(saved);
         }
       } else {
         await calendarSync.syncEventUpdate(saved);
+      }
+      if (updatedMaster != null) {
+        await calendarSync.syncEventUpdate(updatedMaster);
       }
 
       String? warningMessage;
@@ -282,6 +320,11 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       try {
         await ns.cancelAlarm(saved.id);
         if (_hasAlarm) await ns.scheduleAlarm(saved);
+        // 반복의 다음 알림이 방금 뺀 회차였을 수 있다
+        if (updatedMaster != null) {
+          await ns.cancelAlarm(updatedMaster.id);
+          if (updatedMaster.hasAlarm) await ns.scheduleAlarm(updatedMaster);
+        }
       } catch (_) {
         warningMessage = '일정은 저장됐지만 알림 설정은 완료되지 않았습니다.';
       }
@@ -453,7 +496,11 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEdit ? '일정 수정' : '일정 추가'),
+        title: Text(
+          widget.seriesMaster != null
+              ? '이 일정만 수정'
+              : (isEdit ? '일정 수정' : '일정 추가'),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -632,64 +679,66 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                               setState(() => _alarmMinutes = v ?? 30),
                         ),
                       ),
-                    const Divider(indent: 16, endIndent: 16),
-                    ListTile(
-                      leading: const Icon(Icons.repeat),
-                      title: const Text('반복'),
-                      trailing: DropdownButton<RepeatRule>(
-                        value: _repeat,
-                        underline: const SizedBox.shrink(),
-                        items: RepeatRule.values
-                            .map(
-                              (r) => DropdownMenuItem(
-                                value: r,
-                                child: Text(_repeatLabels[r]!),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) => setState(() {
-                          _repeat = v ?? RepeatRule.none;
-                          if (_repeat == RepeatRule.none) _repeatUntil = null;
-                        }),
-                      ),
-                    ),
-                    if (_repeat != RepeatRule.none)
+                    if (widget.seriesMaster == null) ...[
+                      const Divider(indent: 16, endIndent: 16),
                       ListTile(
-                        contentPadding: const EdgeInsets.only(
-                          left: 58,
-                          right: 12,
+                        leading: const Icon(Icons.repeat),
+                        title: const Text('반복'),
+                        trailing: DropdownButton<RepeatRule>(
+                          value: _repeat,
+                          underline: const SizedBox.shrink(),
+                          items: RepeatRule.values
+                              .map(
+                                (r) => DropdownMenuItem(
+                                  value: r,
+                                  child: Text(_repeatLabels[r]!),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) => setState(() {
+                            _repeat = v ?? RepeatRule.none;
+                            if (_repeat == RepeatRule.none) _repeatUntil = null;
+                          }),
                         ),
-                        title: const Text('반복 종료'),
-                        subtitle: Text(
-                          _repeatUntil != null
-                              ? dateFmtShort.format(_repeatUntil!)
-                              : '계속 반복',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_repeatUntil != null)
-                              IconButton(
-                                tooltip: '반복 종료일 제거',
-                                icon: const Icon(Icons.close, size: 18),
-                                onPressed: () =>
-                                    setState(() => _repeatUntil = null),
-                              ),
-                            const Icon(Icons.chevron_right),
-                          ],
-                        ),
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _repeatUntil ?? _startDate,
-                            firstDate: _startDate,
-                            lastDate: DateTime(2030),
-                          );
-                          if (picked != null) {
-                            setState(() => _repeatUntil = picked);
-                          }
-                        },
                       ),
+                      if (_repeat != RepeatRule.none)
+                        ListTile(
+                          contentPadding: const EdgeInsets.only(
+                            left: 58,
+                            right: 12,
+                          ),
+                          title: const Text('반복 종료'),
+                          subtitle: Text(
+                            _repeatUntil != null
+                                ? dateFmtShort.format(_repeatUntil!)
+                                : '계속 반복',
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_repeatUntil != null)
+                                IconButton(
+                                  tooltip: '반복 종료일 제거',
+                                  icon: const Icon(Icons.close, size: 18),
+                                  onPressed: () =>
+                                      setState(() => _repeatUntil = null),
+                                ),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _repeatUntil ?? _startDate,
+                              firstDate: _startDate,
+                              lastDate: DateTime(2030),
+                            );
+                            if (picked != null) {
+                              setState(() => _repeatUntil = picked);
+                            }
+                          },
+                        ),
+                    ],
                   ],
                 ),
               ),

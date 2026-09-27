@@ -13,6 +13,7 @@ import '../../providers/calendar_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/samsung_calendar_sync_service.dart';
 import '../../theme/design_tokens.dart';
+import 'event_form_screen.dart' show EventOccurrenceEditArgs;
 import '../../utils/event_utils.dart';
 import '../../widgets/app_surface.dart';
 
@@ -54,7 +55,7 @@ class EventDetailScreen extends ConsumerWidget {
             IconButton(
               tooltip: '일정 수정',
               icon: const Icon(Icons.edit_outlined),
-              onPressed: () => context.push('/event/edit', extra: master),
+              onPressed: () => _edit(context, master),
             ),
             IconButton(
               tooltip: '일정 삭제',
@@ -196,6 +197,51 @@ class EventDetailScreen extends ConsumerWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  /// 반복 일정이면 이 회차만 고칠지 전체를 고칠지 묻는다.
+  Future<void> _edit(BuildContext context, EventModel master) async {
+    if (master.repeat == RepeatRule.none) {
+      context.push('/event/edit', extra: master);
+      return;
+    }
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('반복 일정 수정'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'one'),
+            child: const Text('이 일정만 수정'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'all'),
+            child: const Text('모든 반복 일정 수정'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
+        ],
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    if (choice == 'all') {
+      context.push('/event/edit', extra: master);
+      return;
+    }
+    // event 는 열어본 회차의 복사본이다. occurrenceDate 가 있으면 그 날로 맞춘다.
+    final day = occurrenceDate ?? event.startDateTime;
+    final s = master.startDateTime;
+    final start = DateTime(day.year, day.month, day.day, s.hour, s.minute);
+    final end = master.endDateTime?.add(start.difference(s));
+    context.push(
+      '/event/edit',
+      extra: EventOccurrenceEditArgs(
+        master: master,
+        occurrence: master.copyWith(startDateTime: start, endDateTime: end),
       ),
     );
   }
@@ -491,8 +537,10 @@ class _DetailHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  [if (event.icon?.isNotEmpty == true) event.icon!, event.title]
-                      .join(' '),
+                  [
+                    if (event.icon?.isNotEmpty == true) event.icon!,
+                    event.title,
+                  ].join(' '),
                   style: TextStyle(
                     fontSize: 24,
                     height: 1.25,

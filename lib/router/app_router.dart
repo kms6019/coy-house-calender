@@ -92,8 +92,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/event/edit',
         builder: (_, state) {
-          final event = state.extra as EventModel;
-          return EventFormScreen(event: event);
+          final extra = state.extra;
+          if (extra is EventOccurrenceEditArgs) {
+            return EventFormScreen(
+              event: extra.occurrence,
+              seriesMaster: extra.master,
+            );
+          }
+          return EventFormScreen(event: extra as EventModel);
         },
       ),
       GoRoute(path: '/settings', builder: (context, _) => const SettingsScreen()),
