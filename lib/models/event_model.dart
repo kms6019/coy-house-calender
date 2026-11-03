@@ -183,6 +183,33 @@ class EventModel {
     );
   }
 
+  /// 새 문서로 저장할 사본 — id 와 생성·수정 시각만 바꾸고 나머지는 전부 유지.
+  EventModel asNew({required String id, required DateTime now}) {
+    return EventModel(
+      id: id,
+      coupleId: coupleId,
+      createdByUid: createdByUid,
+      title: title,
+      description: description,
+      reviewText: reviewText,
+      reviewPhotoUrl: reviewPhotoUrl,
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+      isAllDay: isAllDay,
+      color: color,
+      hasAlarm: hasAlarm,
+      alarmMinutesBefore: alarmMinutesBefore,
+      createdAt: now,
+      updatedAt: now,
+      repeat: repeat,
+      repeatUntil: repeatUntil,
+      excludedDates: excludedDates,
+      icon: icon,
+      isShared: isShared,
+      status: status,
+    );
+  }
+
   /// repeatUntil을 null로 덮어쓸 수 있는 반복 전용 copy (copyWith는 null 병합이라 해제 불가)
   EventModel copyWithRepeat({
     required RepeatRule repeat,

@@ -195,4 +195,22 @@ void main() {
       expect(copied.reviewPhotoUrl, 'https://example.com/kept.jpg');
     });
   });
+
+  test('asNew 는 id·시각만 바꾸고 반복·아이콘·같이·제안을 유지한다', () {
+    final e = EventModel.fromMap(_baseMap()
+      ..['repeat'] = 'biweekly'
+      ..['icon'] = '🎉'
+      ..['isShared'] = true
+      ..['status'] = 'proposed');
+    final now = DateTime(2026, 11, 3, 9);
+    final created = e.asNew(id: 'new-id', now: now);
+
+    expect(created.id, 'new-id');
+    expect(created.createdAt, now);
+    expect(created.updatedAt, now);
+    expect(created.repeat, RepeatRule.biweekly);
+    expect(created.icon, '🎉');
+    expect(created.isShared, isTrue);
+    expect(created.status, 'proposed');
+  });
 }

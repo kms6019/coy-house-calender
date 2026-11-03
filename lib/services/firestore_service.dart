@@ -146,24 +146,8 @@ class FirestoreService {
   }
 
   Future<EventModel> addEvent(EventModel event) async {
-    final id = _uuid.v4();
-    final now = DateTime.now();
-    final newEvent = EventModel(
-      id: id,
-      coupleId: event.coupleId,
-      createdByUid: event.createdByUid,
-      title: event.title,
-      description: event.description,
-      startDateTime: event.startDateTime,
-      endDateTime: event.endDateTime,
-      isAllDay: event.isAllDay,
-      color: event.color,
-      hasAlarm: event.hasAlarm,
-      alarmMinutesBefore: event.alarmMinutesBefore,
-      createdAt: now,
-      updatedAt: now,
-    );
-    await _db.collection('events').doc(id).set(newEvent.toMap());
+    final newEvent = event.asNew(id: _uuid.v4(), now: DateTime.now());
+    await _db.collection('events').doc(newEvent.id).set(newEvent.toMap());
     return newEvent;
   }
 
