@@ -110,6 +110,7 @@ class NativeCalendarBridge {
     String? rrule,
     String? exdate,
     String? customAppUri,
+    String? location,
   }) => _channel.invokeMethod<String>('upsertEvent', {
     'calendarId': calendarId,
     'eventId': eventId,
@@ -122,6 +123,7 @@ class NativeCalendarBridge {
     'rrule': rrule,
     'exdate': exdate,
     'customAppUri': customAppUri,
+    'location': location,
   });
 
   static Future<bool> deleteEvent(String eventId) async =>

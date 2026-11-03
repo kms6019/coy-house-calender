@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'event_place.dart';
 
 /// Firestore 에는 이름(name)으로 저장된다. 순서는 반복 선택 목록 순서.
 enum RepeatRule { none, daily, weekly, biweekly, monthly, yearly }
@@ -26,6 +27,7 @@ class EventModel {
   final String? icon;
   final bool isShared;
   final String status;
+  final EventPlace? place;
 
   const EventModel({
     required this.id,
@@ -49,6 +51,7 @@ class EventModel {
     this.icon,
     this.isShared = false,
     this.status = 'confirmed',
+    this.place,
   });
 
   Color get colorValue => Color(color);
@@ -86,6 +89,7 @@ class EventModel {
       icon: map['icon'] as String?,
       isShared: map['isShared'] as bool? ?? false,
       status: map['status'] as String? ?? 'confirmed',
+      place: EventPlace.fromMap(map['place']),
     );
   }
 
@@ -113,6 +117,7 @@ class EventModel {
       'icon': icon,
       'isShared': isShared,
       'status': status,
+      'place': place?.toMap(),
     };
   }
 
@@ -153,6 +158,7 @@ class EventModel {
       icon: icon,
       isShared: isShared ?? this.isShared,
       status: status ?? this.status,
+      place: place,
     );
   }
 
@@ -180,6 +186,35 @@ class EventModel {
       icon: icon,
       isShared: isShared,
       status: status,
+      place: place,
+    );
+  }
+
+  /// place를 null로 덮어쓸 수 있는 전용 copy (copyWith는 null 병합)
+  EventModel copyWithPlace(EventPlace? place) {
+    return EventModel(
+      id: id,
+      coupleId: coupleId,
+      createdByUid: createdByUid,
+      title: title,
+      description: description,
+      reviewText: reviewText,
+      reviewPhotoUrl: reviewPhotoUrl,
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+      isAllDay: isAllDay,
+      color: color,
+      hasAlarm: hasAlarm,
+      alarmMinutesBefore: alarmMinutesBefore,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      repeat: repeat,
+      repeatUntil: repeatUntil,
+      excludedDates: excludedDates,
+      icon: icon,
+      isShared: isShared,
+      status: status,
+      place: place,
     );
   }
 
@@ -207,6 +242,7 @@ class EventModel {
       icon: icon,
       isShared: isShared,
       status: status,
+      place: place,
     );
   }
 
@@ -238,6 +274,7 @@ class EventModel {
       icon: icon,
       isShared: isShared,
       status: status,
+      place: place,
     );
   }
 }

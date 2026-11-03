@@ -29,6 +29,9 @@ class DeviceEventSpec {
   /// 반복 중 "이 회차만 삭제"한 회차 (RFC 5545 EXDATE, 쉼표 구분)
   final String? exdate;
 
+  /// 장소 한 줄 표기 (Events.EVENT_LOCATION)
+  final String? location;
+
   const DeviceEventSpec({
     required this.title,
     required this.description,
@@ -38,6 +41,7 @@ class DeviceEventSpec {
     required this.timeZone,
     required this.rrule,
     this.exdate,
+    this.location,
   });
 }
 
@@ -108,6 +112,7 @@ DeviceEventSpec buildDeviceEventSpec(EventModel event) {
       timeZone: 'UTC',
       rrule: _rrule(event),
       exdate: _exdate(event),
+      location: event.place?.label,
     );
   }
   return DeviceEventSpec(
@@ -119,5 +124,6 @@ DeviceEventSpec buildDeviceEventSpec(EventModel event) {
     timeZone: 'Asia/Seoul',
     rrule: _rrule(event),
     exdate: _exdate(event),
+    location: event.place?.label,
   );
 }

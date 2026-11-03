@@ -44,7 +44,10 @@ class EventListTile extends StatelessWidget {
           ),
         ),
         subtitle: Text(
-          '${event.isProposed ? '제안 · ' : ''}$timeText',
+          '${event.isProposed ? '제안 · ' : ''}$timeText'
+          '${event.place != null ? ' · ${event.place!.name}' : ''}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.bodySmall?.copyWith(
             color: colors.onSurfaceVariant,
           ),

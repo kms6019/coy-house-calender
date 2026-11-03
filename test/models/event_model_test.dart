@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:coy_house_calender/models/event_model.dart';
+import 'package:coy_house_calender/models/event_place.dart';
 
 Map<String, dynamic> _baseMap() => {
       'id': 'e1',
@@ -196,12 +197,65 @@ void main() {
     });
   });
 
-  test('asNew 는 id·시각만 바꾸고 반복·아이콘·같이·제안을 유지한다', () {
+  group('장소 필드', () {
+    const placeMap = {
+      'name': '스타벅스 강남역점',
+      'address': '서울특별시 강남구 강남대로 390',
+      'placeId': 'ChIJ123',
+    };
+
+    test('구 문서(장소 없음)는 null, toMap 은 place: null', () {
+      final e = EventModel.fromMap(_baseMap());
+      expect(e.place, isNull);
+      expect(e.toMap()['place'], isNull);
+    });
+
+    test('직렬화 왕복', () {
+      final e = EventModel.fromMap(_baseMap()..['place'] = placeMap);
+      expect(e.place!.name, '스타벅스 강남역점');
+      expect(e.place!.address, '서울특별시 강남구 강남대로 390');
+      expect(e.place!.placeId, 'ChIJ123');
+      expect(e.toMap()['place'], placeMap);
+    });
+
+    test('이름이 비었거나 형식이 다르면 null', () {
+      expect(EventModel.fromMap(_baseMap()..['place'] = {'name': '  '}).place,
+          isNull);
+      expect(EventModel.fromMap(_baseMap()..['place'] = '집').place, isNull);
+    });
+
+    test('copyWith 는 장소를 보존하고 copyWithPlace 는 지울 수 있다', () {
+      final e = EventModel.fromMap(_baseMap()..['place'] = placeMap);
+      expect(e.copyWith(title: '수정').place!.name, '스타벅스 강남역점');
+      expect(e.copyWithIcon('🎉').place, isNotNull);
+      expect(e.copyWithPlace(null).place, isNull);
+    });
+
+    test('label: 주소가 있으면 "이름, 주소", 없으면 이름만', () {
+      expect(EventPlace.fromMap(placeMap)!.label,
+          '스타벅스 강남역점, 서울특별시 강남구 강남대로 390');
+      expect(const EventPlace(name: '집').label, '집');
+    });
+
+    test('mapsUri 는 place id 가 있으면 함께 넘긴다', () {
+      final uri = EventPlace.fromMap(placeMap)!.mapsUri;
+      expect(uri.host, 'www.google.com');
+      expect(uri.queryParameters['api'], '1');
+      expect(uri.queryParameters['query'],
+          '스타벅스 강남역점, 서울특별시 강남구 강남대로 390');
+      expect(uri.queryParameters['query_place_id'], 'ChIJ123');
+      expect(const EventPlace(name: '집').mapsUri.queryParameters,
+          isNot(contains('query_place_id')));
+    });
+  });
+
+  test('asNew 는 id·시각만 바꾸고 반복·아이콘·같이·제안·장소를 유지한다', () {
     final e = EventModel.fromMap(_baseMap()
       ..['repeat'] = 'biweekly'
       ..['icon'] = '🎉'
       ..['isShared'] = true
-      ..['status'] = 'proposed');
+      ..['status'] = 'proposed'
+      ..['place'] = {'name': '집'});
     final now = DateTime(2026, 11, 3, 9);
     final created = e.asNew(id: 'new-id', now: now);
 
@@ -212,5 +266,6 @@ void main() {
     expect(created.icon, '🎉');
     expect(created.isShared, isTrue);
     expect(created.status, 'proposed');
+    expect(created.place!.name, '집');
   });
 }

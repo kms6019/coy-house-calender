@@ -325,6 +325,7 @@ class SamsungCalendarSyncService {
         rrule: spec.rrule,
         exdate: spec.exdate,
         customAppUri: coyEventMarker(event.id),
+        location: spec.location,
       );
       if (id == null) return '이벤트 ID를 반환하지 않음';
       await _mapping.setDeviceEventId(event.id, id);

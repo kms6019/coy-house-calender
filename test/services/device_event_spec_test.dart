@@ -10,6 +10,7 @@ EventModel _event({
   String repeat = 'none',
   DateTime? until,
   List<DateTime> excluded = const [],
+  Map<String, dynamic>? place,
 }) {
   return EventModel.fromMap({
     'id': 'ev1',
@@ -28,6 +29,7 @@ EventModel _event({
     'repeat': repeat,
     'repeatUntil': until != null ? Timestamp.fromDate(until) : null,
     'excludedDates': excluded.map(Timestamp.fromDate).toList(),
+    'place': place,
   });
 }
 
@@ -150,5 +152,37 @@ void main() {
       _event(start: DateTime(2026, 7, 1, 9), repeat: 'biweekly'),
     );
     expect(spec.rrule, 'FREQ=WEEKLY;INTERVAL=2');
+  });
+
+  group('장소 (EVENT_LOCATION)', () {
+    test('장소가 없으면 null', () {
+      final spec = buildDeviceEventSpec(_event(start: DateTime(2026, 7, 1, 9)));
+      expect(spec.location, isNull);
+    });
+
+    test('주소가 있으면 "이름, 주소"', () {
+      final spec = buildDeviceEventSpec(
+        _event(
+          start: DateTime(2026, 7, 1, 9),
+          place: {
+            'name': '스타벅스 강남역점',
+            'address': '서울특별시 강남구 강남대로 390',
+            'placeId': 'ChIJabc',
+          },
+        ),
+      );
+      expect(spec.location, '스타벅스 강남역점, 서울특별시 강남구 강남대로 390');
+    });
+
+    test('이름만 있으면 이름 그대로 (종일도 같다)', () {
+      final spec = buildDeviceEventSpec(
+        _event(
+          start: DateTime(2026, 7, 1),
+          allDay: true,
+          place: {'name': '시댁'},
+        ),
+      );
+      expect(spec.location, '시댁');
+    });
   });
 }

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/event_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
@@ -79,6 +80,20 @@ class EventDetailScreen extends ConsumerWidget {
                 value: event.alarmMinutesBefore == 0
                     ? '시작 시'
                     : '${event.alarmMinutesBefore}분 전',
+              ),
+            if (event.place != null)
+              _InfoRow(
+                label: '장소',
+                value: event.place!.name,
+                detail: event.place!.address,
+                trailing: TextButton.icon(
+                  onPressed: () => launchUrl(
+                    event.place!.mapsUri,
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  icon: const Icon(Icons.map_outlined, size: 18),
+                  label: const Text('지도'),
+                ),
               ),
             if (event.description != null && event.description!.isNotEmpty)
               _InfoRow(label: '메모', value: event.description!),
@@ -613,7 +628,14 @@ class _DetailHeader extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
-  const _InfoRow({required this.label, required this.value});
+  final String? detail;
+  final Widget? trailing;
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    this.detail,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -634,17 +656,28 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 15,
-                height: 1.45,
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.2,
-                color: t.ink,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.45,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.2,
+                    color: t.ink,
+                  ),
+                ),
+                if (detail != null)
+                  Text(
+                    detail!,
+                    style: TextStyle(fontSize: 13, height: 1.5, color: t.ink45),
+                  ),
+              ],
             ),
           ),
+          ?trailing,
         ],
       ),
     );

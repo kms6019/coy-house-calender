@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/event_model.dart';
+import '../../models/event_place.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../services/notification_service.dart';
@@ -11,6 +12,7 @@ import '../../theme/couple_palette.dart';
 import '../../theme/event_icons.dart';
 import '../../utils/conflict_utils.dart';
 import '../../widgets/app_surface.dart';
+import 'place_search_sheet.dart';
 
 /// 반복 일정의 한 회차만 고칠 때 넘기는 값.
 class EventOccurrenceEditArgs {
@@ -61,6 +63,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   bool _loading = false;
   int? _color; // null = 내 커플 색 (기본)
   String? _icon;
+  EventPlace? _place;
 
   static const _alarmOptions = [0, 15, 30, 60, 1440];
   static const _alarmLabels = ['시작 시', '15분 전', '30분 전', '1시간 전', '하루 전'];
@@ -99,6 +102,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           : widget.event!.repeatUntil;
       _color = widget.event!.color;
       _icon = widget.event!.icon;
+      _place = widget.event!.place;
       if (widget.event!.endDateTime != null) {
         _endDate = DateUtils.dateOnly(widget.event!.endDateTime!);
         _endTime = TimeOfDay.fromDateTime(widget.event!.endDateTime!);
@@ -262,6 +266,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
           repeatUntil: _repeat == RepeatRule.none ? null : _repeatUntil,
           icon: _icon,
           isShared: _isShared,
+          place: _place,
           status: master != null
               ? master.status
               : (_propose ? 'proposed' : 'confirmed'),
@@ -299,7 +304,10 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
               ? const []
               : widget.event!.excludedDates,
         );
-        saved = saved.copyWith(color: effectiveColor).copyWithIcon(_icon);
+        saved = saved
+            .copyWith(color: effectiveColor)
+            .copyWithIcon(_icon)
+            .copyWithPlace(_place);
         await fs.updateEvent(saved, editorUid: authUid);
       }
 
@@ -392,6 +400,14 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       ),
     );
     if (picked != null) setState(() => _color = picked);
+  }
+
+  Future<void> _pickPlace() async {
+    final picked = await showPlaceSearchSheet(
+      context,
+      initialText: _place?.name,
+    );
+    if (picked != null && mounted) setState(() => _place = picked);
   }
 
   Future<void> _pickIcon() async {
@@ -831,6 +847,32 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
               ),
               const SizedBox(height: 18),
               _EventFormSection(
+                title: '장소',
+                subtitle: '구글 지도에서 찾거나 직접 적어요.',
+                icon: Icons.place_outlined,
+                child: ListTile(
+                  leading: const Icon(Icons.place_outlined),
+                  title: Text(
+                    _place?.name ?? '장소 추가',
+                    style: _place == null
+                        ? TextStyle(color: colors.onSurfaceVariant)
+                        : null,
+                  ),
+                  subtitle: _place?.address != null
+                      ? Text(_place!.address!)
+                      : null,
+                  trailing: _place == null
+                      ? const Icon(Icons.chevron_right)
+                      : IconButton(
+                          tooltip: '장소 지우기',
+                          icon: const Icon(Icons.close),
+                          onPressed: () => setState(() => _place = null),
+                        ),
+                  onTap: _pickPlace,
+                ),
+              ),
+              const SizedBox(height: 18),
+              _EventFormSection(
                 title: '메모',
                 subtitle: '필요한 내용을 자유롭게 적어 두세요.',
                 icon: Icons.notes_outlined,
@@ -839,7 +881,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                   child: TextFormField(
                     controller: _descCtrl,
                     decoration: const InputDecoration(
-                      hintText: '장소, 준비물, 기억하고 싶은 내용을 적어 보세요.',
+                      hintText: '준비물, 기억하고 싶은 내용을 적어 보세요.',
                     ),
                     maxLines: null,
                     minLines: 4,

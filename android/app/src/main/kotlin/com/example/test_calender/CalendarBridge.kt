@@ -333,6 +333,7 @@ class CalendarBridge private constructor(
         val rrule = call.argument<String>("rrule")?.takeUnless { it.isEmpty() }
         val exdate = call.argument<String>("exdate")?.takeUnless { it.isEmpty() }
         val customAppUri = call.argument<String>("customAppUri")
+        val location = call.argument<String>("location")?.takeUnless { it.isEmpty() }
 
         if (dtend < dtstart) {
             throw IllegalArgumentException("dtend는 dtstart보다 빠를 수 없습니다.")
@@ -347,6 +348,8 @@ class CalendarBridge private constructor(
             // 종일 일정은 CalendarContract 규약상 UTC 기준 밀리초와 UTC 시간대를 사용한다.
             put(CalendarContract.Events.EVENT_TIMEZONE, if (allDay) "UTC" else timeZone)
             put(CalendarContract.Events.CUSTOM_APP_URI, customAppUri)
+            // 장소를 지운 일정은 null 로 덮어써야 기기 캘린더에서도 사라진다.
+            put(CalendarContract.Events.EVENT_LOCATION, location)
 
             if (rrule != null) {
                 put(CalendarContract.Events.RRULE, rrule)

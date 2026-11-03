@@ -1,5 +1,7 @@
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -11,6 +13,10 @@ setGlobalOptions({
   maxInstances: 2,
   memory: "256MiB",
 });
+
+// 구글 Places API 키는 앱(APK)에 넣지 않고 서버 시크릿으로만 둔다. APK 에서 키를
+// 뽑아 남용해도 과금되지 않도록, 검색은 로그인한 사용자만 이 함수를 거쳐서 한다.
+const placesApiKey = defineSecret("PLACES_API_KEY");
 
 // 알림 판단에 쓰는 이벤트 필드 — 이 중 하나라도 바뀌어야 "수정"으로 침
 const MEANINGFUL_FIELDS = [
@@ -24,6 +30,7 @@ const MEANINGFUL_FIELDS = [
   "repeat",
   "repeatUntil",
   "excludedDates",
+  "place",
 ];
 
 function hasMeaningfulChange(before, after) {
@@ -158,4 +165,63 @@ exports.onEventUpdated = onDocumentUpdated("events/{eventId}", async (event) => 
 
   if (!hasMeaningfulChange(before, after)) return;
   await sendToPartner(after, event.params.eventId, actorUid, "일정을 수정했어요");
+});
+
+// Places API (New) 자동완성 응답 → 앱이 쓰는 장소 목록.
+// Place Details 는 부르지 않는다 — 이름·주소·placeId 는 자동완성 결과로 충분하고,
+// 상세 조회까지 하면 건마다 과금 단계가 올라간다.
+function toSuggestions(json) {
+  const suggestions = [];
+  for (const s of json?.suggestions ?? []) {
+    const p = s?.placePrediction;
+    if (!p) continue; // queryPrediction(검색어 추천)은 장소가 아니라서 버린다
+    const placeId = (p.placeId ?? "").trim();
+    const name = (
+      p.structuredFormat?.mainText?.text ?? p.text?.text ?? ""
+    ).trim();
+    if (!placeId || !name) continue;
+    // 국내 주소는 전부 "대한민국 " 으로 시작해서 일정 화면·삼성캘린더에서 군더더기다
+    const address = (p.structuredFormat?.secondaryText?.text ?? "")
+      .trim()
+      .replace(/^대한민국\s+/, "");
+    suggestions.push(address ? { placeId, name, address } : { placeId, name });
+  }
+  return { suggestions };
+}
+
+exports.searchPlaces = onCall({ secrets: [placesApiKey] }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "로그인이 필요해요");
+  }
+  const input =
+    typeof request.data?.input === "string" ? request.data.input.trim() : "";
+  if (input.length < 1 || input.length > 100) {
+    throw new HttpsError("invalid-argument", "검색어는 1~100자여야 해요");
+  }
+  // 세션 토큰: 자동완성 여러 번을 한 세션으로 묶어 과금 단위를 줄인다
+  const token = request.data?.sessionToken;
+  const sessionToken =
+    typeof token === "string" && token.length > 0 && token.length <= 64
+      ? token
+      : undefined;
+
+  const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": placesApiKey.value(),
+    },
+    body: JSON.stringify({
+      input,
+      languageCode: "ko",
+      regionCode: "kr",
+      ...(sessionToken ? { sessionToken } : {}),
+    }),
+  });
+  if (!res.ok) {
+    const body = (await res.text()).slice(0, 500);
+    console.error(`[searchPlaces] Places 응답 ${res.status}: ${body}`);
+    throw new HttpsError("unavailable", "장소 검색을 할 수 없어요");
+  }
+  return toSuggestions(await res.json());
 });
