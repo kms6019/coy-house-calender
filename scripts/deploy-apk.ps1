@@ -34,7 +34,9 @@ Copy-Item "$root\build\app\outputs\flutter-apk\app-release.apk" "$root\hosting_p
 $manifest = [ordered]@{
   buildNumber = $buildNumber
   versionName = $versionName
-  apkUrl      = 'https://coy-house-calender.web.app/coyhouse.apk'
+  # ?v=빌드번호: 배포 직후 CDN 이 옛 APK 를 잠깐 돌려주는 일이 있어 주소를 빌드마다 다르게 한다.
+  # 앱은 다 받은 APK 를 재사용하므로 옛 파일을 새 빌드로 잘못 저장하면 계속 그걸 깐다.
+  apkUrl      = "https://coy-house-calender.web.app/coyhouse.apk?v=$buildNumber"
   notes       = $Notes
 }
 $manifest | ConvertTo-Json -Depth 3 | Set-Content "$root\hosting_public\version.json" -Encoding UTF8
