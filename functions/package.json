@@ -2,7 +2,7 @@
   "name": "functions",
   "description": "CoyHouseCalender Cloud Functions",
   "engines": {
-    "node": "20"
+    "node": "24"
   },
   "main": "index.js",
   "dependencies": {
