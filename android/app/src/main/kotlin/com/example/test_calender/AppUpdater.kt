@@ -31,6 +31,10 @@ object AppUpdater {
         MethodChannel(messenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "canInstallSilently" -> result.success(canInstallSilently(app))
+                "apkVersionCode" -> {
+                    val path = call.argument<String>("path")
+                    result.success(path?.let { apkVersionCode(app, it) })
+                }
                 "install" -> {
                     val path = call.argument<String>("path")
                     if (path == null) {
@@ -46,6 +50,18 @@ object AppUpdater {
                 }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    /** 내려받은 APK 의 versionCode. 읽지 못하면 null. */
+    private fun apkVersionCode(context: Context, path: String): Long? {
+        @Suppress("DEPRECATION")
+        val info = context.packageManager.getPackageArchiveInfo(path, 0) ?: return null
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            info.versionCode.toLong()
         }
     }
 

@@ -90,21 +90,33 @@ class UpdateService {
     }
   }
 
+  /// 빌드마다 다른 다운로드 주소. 배포 직후 CDN 엣지가 옛 APK 를 잠깐 돌려주는
+  /// 일이 있어서 캐시 키를 빌드 번호로 가른다.
+  static Uri apkDownloadUri(UpdateInfo info) {
+    final uri = Uri.parse(info.apkUrl);
+    return uri.replace(
+      queryParameters: {...uri.queryParameters, 'v': '${info.buildNumber}'},
+    );
+  }
+
   /// APK를 내려받는다. [onProgress]는 0.0~1.0 (길이를 모르면 호출되지 않음).
   ///
-  /// 받는 중에는 `.part` 파일에 쓰고 다 받은 뒤에 이름을 바꾼다. 그래서 완성된
-  /// 파일이 있으면 다시 받지 않는다 — 받는 도중 앱을 닫아 끊기면 처음부터 다시.
+  /// 받는 중에는 `.part` 파일에 쓰고 다 받은 뒤에 이름을 바꾼다. 완성된 파일은
+  /// 다시 받지 않되, 실제 버전이 [info] 와 다르면(옛 APK 를 받아 둔 경우) 버린다.
   Future<File> download(
     UpdateInfo info, {
     void Function(double)? onProgress,
   }) async {
     final dir = await getApplicationSupportDirectory();
     final file = File('${dir.path}/coyhouse-${info.buildNumber}.apk');
-    if (await file.exists()) return file;
+    if (await file.exists()) {
+      if (await _isBuild(file, info.buildNumber)) return file;
+      await file.delete();
+    }
     final part = File('${file.path}.part');
 
     final response = await _client.send(
-      http.Request('GET', Uri.parse(info.apkUrl)),
+      http.Request('GET', apkDownloadUri(info)),
     );
     if (response.statusCode != 200) {
       throw HttpException('다운로드 실패 (${response.statusCode})');
@@ -125,7 +137,24 @@ class UpdateService {
     if (total > 0 && received != total) {
       throw HttpException('다운로드가 중간에 끊겼어요 ($received/$total)');
     }
-    return part.rename(file.path);
+    final done = await part.rename(file.path);
+    if (!await _isBuild(done, info.buildNumber)) {
+      await done.delete();
+      throw const HttpException('받은 파일이 새 버전이 아니에요. 잠시 후 다시 시도해 주세요.');
+    }
+    return done;
+  }
+
+  /// APK 의 versionCode 가 [build] 인지. 읽지 못하면 막지 않는다.
+  Future<bool> _isBuild(File apk, int build) async {
+    try {
+      final code = await _channel.invokeMethod<int>('apkVersionCode', {
+        'path': apk.path,
+      });
+      return code == null || code == build;
+    } catch (_) {
+      return true;
+    }
   }
 
   /// 확인 창 없이 설치할 수 있는 상태인지 (안드로이드 12+ 이고 설치자가 이 앱).

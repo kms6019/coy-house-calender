@@ -82,4 +82,25 @@ void main() {
       );
     });
   });
+
+  group('apkDownloadUri', () {
+    UpdateInfo infoWith(String url) => UpdateInfo.fromJson({
+      'buildNumber': 23,
+      'apkUrl': url,
+    })!;
+
+    test('빌드 번호를 v 로 붙인다', () {
+      final uri = UpdateService.apkDownloadUri(
+        infoWith('https://example.com/app.apk'),
+      );
+      expect(uri.toString(), 'https://example.com/app.apk?v=23');
+    });
+
+    test('이미 v 가 있으면 빌드 번호로 맞추고 다른 값은 유지', () {
+      final uri = UpdateService.apkDownloadUri(
+        infoWith('https://example.com/app.apk?v=22&x=1'),
+      );
+      expect(uri.queryParameters, {'v': '23', 'x': '1'});
+    });
+  });
 }
