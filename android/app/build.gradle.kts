@@ -15,6 +15,14 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// 일정 상세 지도 그림(Maps SDK for Android) 키. 공개 저장소라 커밋하지 않는
+// android/local.properties 의 MAPS_API_KEY 에 둔다 (키는 이 앱 서명으로만 쓰이게 제한).
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
 android {
     namespace = "com.example.test_calender"
     compileSdk = flutter.compileSdkVersion
@@ -39,6 +47,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["mapsApiKey"] = localProperties.getProperty("MAPS_API_KEY", "")
     }
 
     signingConfigs {

@@ -40,6 +40,9 @@ class _PlaceSearchSheetState extends State<_PlaceSearchSheet> {
   bool _loading = false;
   bool _failed = false;
 
+  /// 고른 장소의 좌표를 받는 중 — 그동안은 다른 항목을 못 누른다
+  bool _picking = false;
+
   /// 늦게 도착한 이전 검색 결과가 최신 결과를 덮지 않게 하는 번호
   int _requestSeq = 0;
 
@@ -95,6 +98,17 @@ class _PlaceSearchSheetState extends State<_PlaceSearchSheet> {
     }
   }
 
+  Future<void> _pick(EventPlace place) async {
+    setState(() => _picking = true);
+    var picked = place;
+    try {
+      picked = await _service.withLocation(place, sessionToken: _sessionToken);
+    } catch (_) {
+      // 좌표를 못 받아도 장소는 저장한다 — 상세 화면의 지도 그림만 빠진다
+    }
+    if (mounted) Navigator.of(context).pop(picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -120,7 +134,7 @@ class _PlaceSearchSheetState extends State<_PlaceSearchSheet> {
                 decoration: InputDecoration(
                   hintText: '장소 이름이나 주소',
                   prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _loading
+                  suffixIcon: _loading || _picking
                       ? const Padding(
                           padding: EdgeInsets.all(14),
                           child: SizedBox(
@@ -161,7 +175,7 @@ class _PlaceSearchSheetState extends State<_PlaceSearchSheet> {
                       subtitle: place.address != null
                           ? Text(place.address!)
                           : null,
-                      onTap: () => Navigator.of(context).pop(place),
+                      onTap: _picking ? null : () => _pick(place),
                     ),
                 ],
               ),

@@ -1,7 +1,7 @@
 /// 일정 장소.
 ///
 /// 직접 입력하면 [name] 만 있고, 구글 장소 검색으로 고르면 [address] 와
-/// [placeId] 가 함께 채워진다.
+/// [placeId], 좌표([lat]·[lng])가 함께 채워진다.
 class EventPlace {
   final String name;
   final String? address;
@@ -9,7 +9,27 @@ class EventPlace {
   /// 구글 Places 의 place id — 지도에서 정확히 그 장소를 열 때 쓴다.
   final String? placeId;
 
-  const EventPlace({required this.name, this.address, this.placeId});
+  /// 일정 상세의 지도 그림 위치. 둘 다 있거나 둘 다 null.
+  final double? lat;
+  final double? lng;
+
+  const EventPlace({
+    required this.name,
+    this.address,
+    this.placeId,
+    this.lat,
+    this.lng,
+  });
+
+  bool get hasLocation => lat != null && lng != null;
+
+  EventPlace withLocation(double lat, double lng) => EventPlace(
+    name: name,
+    address: address,
+    placeId: placeId,
+    lat: lat,
+    lng: lng,
+  );
 
   /// 기기 캘린더(EVENT_LOCATION)와 지도 검색어로 쓰는 한 줄 표기.
   String get label {
@@ -29,10 +49,14 @@ class EventPlace {
     if (raw is! Map) return null;
     final name = _text(raw['name']);
     if (name == null) return null;
+    final lat = raw['lat'], lng = raw['lng'];
+    final hasLocation = lat is num && lng is num;
     return EventPlace(
       name: name,
       address: _text(raw['address']),
       placeId: _text(raw['placeId']),
+      lat: hasLocation ? lat.toDouble() : null,
+      lng: hasLocation ? lng.toDouble() : null,
     );
   }
 
@@ -40,6 +64,7 @@ class EventPlace {
     'name': name,
     if (address != null) 'address': address,
     if (placeId != null) 'placeId': placeId,
+    if (hasLocation) ...{'lat': lat, 'lng': lng},
   };
 
   static String? _text(Object? v) {

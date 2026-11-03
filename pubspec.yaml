@@ -52,6 +52,7 @@ dependencies:
   klc: ^0.1.0
   cloud_functions: ^5.6.2
   url_launcher: ^6.3.3
+  google_maps_flutter: ^2.18.1
 
 dev_dependencies:
   flutter_test:

@@ -168,8 +168,7 @@ exports.onEventUpdated = onDocumentUpdated("events/{eventId}", async (event) => 
 });
 
 // Places API (New) 자동완성 응답 → 앱이 쓰는 장소 목록.
-// Place Details 는 부르지 않는다 — 이름·주소·placeId 는 자동완성 결과로 충분하고,
-// 상세 조회까지 하면 건마다 과금 단계가 올라간다.
+// 이름·주소·placeId 는 자동완성 결과로 충분하다. 좌표만 placeLocation 으로 따로 받는다.
 function toSuggestions(json) {
   const suggestions = [];
   for (const s of json?.suggestions ?? []) {
@@ -224,4 +223,40 @@ exports.searchPlaces = onCall({ secrets: [placesApiKey] }, async (request) => {
     throw new HttpsError("unavailable", "장소 검색을 할 수 없어요");
   }
   return toSuggestions(await res.json());
+});
+
+// 고른 장소의 좌표 (일정 상세의 지도 그림용).
+// 자동완성과 같은 세션 토큰으로 부르면 그 세션의 자동완성은 과금되지 않고,
+// 필드를 location 하나로 좁혀 Place Details 가장 낮은 단계(Essentials)로 끝난다.
+exports.placeLocation = onCall({ secrets: [placesApiKey] }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "로그인이 필요해요");
+  }
+  const placeId = request.data?.placeId;
+  // 주소 경로에 그대로 넣으므로 place id 에 쓰이는 문자만 허용
+  if (typeof placeId !== "string" || !/^[A-Za-z0-9_-]{1,512}$/.test(placeId)) {
+    throw new HttpsError("invalid-argument", "placeId 형식이 올바르지 않아요");
+  }
+  const token = request.data?.sessionToken;
+  const query =
+    typeof token === "string" && token.length > 0 && token.length <= 64
+      ? `?sessionToken=${encodeURIComponent(token)}`
+      : "";
+
+  const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}${query}`, {
+    headers: {
+      "X-Goog-Api-Key": placesApiKey.value(),
+      "X-Goog-FieldMask": "location",
+    },
+  });
+  if (!res.ok) {
+    const body = (await res.text()).slice(0, 500);
+    console.error(`[placeLocation] Places 응답 ${res.status}: ${body}`);
+    throw new HttpsError("unavailable", "장소 위치를 가져올 수 없어요");
+  }
+  const loc = (await res.json())?.location;
+  if (typeof loc?.latitude !== "number" || typeof loc?.longitude !== "number") {
+    throw new HttpsError("not-found", "장소 위치가 없어요");
+  }
+  return { lat: loc.latitude, lng: loc.longitude };
 });

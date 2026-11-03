@@ -247,6 +247,27 @@ void main() {
       expect(const EventPlace(name: '집').mapsUri.queryParameters,
           isNot(contains('query_place_id')));
     });
+
+    test('좌표: 둘 다 있으면 저장·복원, 하나만 있으면 버린다', () {
+      final withLoc = {...placeMap, 'lat': 37.4979, 'lng': 127};
+      final place = EventPlace.fromMap(withLoc)!;
+      expect(place.hasLocation, isTrue);
+      expect(place.lat, 37.4979);
+      expect(place.lng, 127.0); // Firestore 가 정수로 돌려줘도 double 로
+      expect(place.toMap(), withLoc);
+
+      final half = EventPlace.fromMap({...placeMap, 'lat': 37.4979})!;
+      expect(half.hasLocation, isFalse);
+      expect(half.lat, isNull);
+      expect(half.toMap(), placeMap);
+    });
+
+    test('withLocation 은 나머지 필드를 유지한다', () {
+      final place = EventPlace.fromMap(placeMap)!.withLocation(37.5, 127.1);
+      expect(place.name, '스타벅스 강남역점');
+      expect(place.placeId, 'ChIJ123');
+      expect(place.toMap(), {...placeMap, 'lat': 37.5, 'lng': 127.1});
+    });
   });
 
   test('asNew 는 id·시각만 바꾸고 반복·아이콘·같이·제안·장소를 유지한다', () {

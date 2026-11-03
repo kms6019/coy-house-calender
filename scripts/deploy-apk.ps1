@@ -26,6 +26,11 @@ $versionName = $Matches['name']
 $buildNumber = [int]$Matches['build']
 Write-Host "배포 버전: $versionName (build $buildNumber)"
 
+# 지도 키가 빠진 채 빌드되면 일정 상세의 지도 그림이 빈칸이 된다
+if (-not (Select-String -Path "$root\android\local.properties" -Pattern '^MAPS_API_KEY=\S+' -Quiet)) {
+  throw 'android/local.properties 에 MAPS_API_KEY 가 없습니다 (build.gradle.kts 참고)'
+}
+
 & $flutter build apk --release
 if ($LASTEXITCODE -ne 0) { throw 'APK 빌드 실패' }
 
