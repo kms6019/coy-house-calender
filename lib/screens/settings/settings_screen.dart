@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../models/couple_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
@@ -13,6 +15,7 @@ import '../../services/widget_service.dart';
 import '../../theme/couple_palette.dart';
 import '../../theme/app_theme.dart' show kPrimaryPurple;
 import '../../widgets/app_surface.dart';
+import '../../widgets/update_prompt.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -280,14 +283,7 @@ class SettingsScreen extends ConsumerWidget {
               title: '앱 정보',
               icon: Icons.info_outline,
               children: [
-                ListTile(
-                  leading: const Icon(Icons.apps_outlined),
-                  title: const Text('버전'),
-                  trailing: Text(
-                    '1.0.0',
-                    style: TextStyle(color: colors.onSurfaceVariant),
-                  ),
-                ),
+                const _VersionTile(),
                 ListTile(
                   leading: Icon(Icons.logout, color: colors.error),
                   title: Text('로그아웃', style: TextStyle(color: colors.error)),
@@ -911,3 +907,31 @@ class _BriefingSection extends ConsumerWidget {
   }
 }
 
+/// 설치된 버전 표시 + (안드로이드) 업데이트 확인 버튼.
+class _VersionTile extends StatelessWidget {
+  const _VersionTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final canUpdate = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) {
+        final info = snapshot.data;
+        return ListTile(
+          leading: const Icon(Icons.apps_outlined),
+          title: const Text('버전'),
+          subtitle: Text(
+            info == null ? '' : '${info.version} (${info.buildNumber})',
+          ),
+          trailing: canUpdate
+              ? TextButton(
+                  onPressed: () => checkForUpdateManually(context),
+                  child: const Text('업데이트 확인'),
+                )
+              : null,
+        );
+      },
+    );
+  }
+}

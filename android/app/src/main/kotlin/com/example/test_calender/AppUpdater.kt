@@ -1,5 +1,9 @@
 package com.example.test_calender
 
+import android.app.ActivityManager
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -99,9 +103,15 @@ class UpdateStatusReceiver : BroadcastReceiver() {
                     intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
                 } else {
                     intent.getParcelableExtra(Intent.EXTRA_INTENT)
+                } ?: return
+                confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                // 앱을 닫은 뒤(백그라운드) 설치하면 안드로이드가 화면 띄우기를 막아서
+                // 확인 창이 조용히 사라진다 — 그때는 알림으로 남겨 눌러서 설치하게 한다.
+                if (isAppInForeground()) {
+                    context.startActivity(confirm)
+                } else {
+                    notifyInstallReady(context, confirm)
                 }
-                confirm?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                confirm?.let { context.startActivity(it) }
             }
             PackageInstaller.STATUS_SUCCESS -> Log.i("AppUpdater", "업데이트 설치 완료")
             else -> Log.w(
@@ -109,5 +119,45 @@ class UpdateStatusReceiver : BroadcastReceiver() {
                 "업데이트 실패($status): ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}",
             )
         }
+    }
+
+    private fun isAppInForeground(): Boolean {
+        val state = ActivityManager.RunningAppProcessInfo()
+        ActivityManager.getMyMemoryState(state)
+        return state.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+    }
+
+    private fun notifyInstallReady(context: Context, confirm: Intent) {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            manager.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "앱 업데이트", NotificationManager.IMPORTANCE_HIGH),
+            )
+        }
+        val tap = PendingIntent.getActivity(
+            context,
+            NOTIFICATION_ID,
+            confirm,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        @Suppress("DEPRECATION")
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(context, CHANNEL_ID)
+        } else {
+            Notification.Builder(context)
+        }
+        val notification = builder
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("새 버전 설치 준비 완료")
+            .setContentText("눌러서 업데이트를 마쳐 주세요")
+            .setContentIntent(tap)
+            .setAutoCancel(true)
+            .build()
+        manager.notify(NOTIFICATION_ID, notification)
+    }
+
+    private companion object {
+        const val CHANNEL_ID = "app_update"
+        const val NOTIFICATION_ID = 7001
     }
 }

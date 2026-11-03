@@ -53,23 +53,34 @@ class UpdateService {
 
   bool get _supported => !kIsWeb && Platform.isAndroid;
 
+  /// 배포된 최신 버전 정보. 네트워크·형식 오류는 예외로 올린다
+  /// ("업데이트 확인" 버튼이 "최신 버전"과 "확인 실패"를 구분해야 해서).
+  Future<UpdateInfo> fetchLatest() async {
+    final response = await _client
+        .get(Uri.parse('$_manifestUrl?t=${DateTime.now().millisecondsSinceEpoch}'))
+        .timeout(const Duration(seconds: 8));
+    if (response.statusCode != 200) {
+      throw HttpException('버전 정보 응답 ${response.statusCode}');
+    }
+    final info = UpdateInfo.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
+    if (info == null) throw const FormatException('버전 정보 형식 오류');
+    return info;
+  }
+
+  /// 설치된 앱의 빌드 번호 (pubspec 의 +N)
+  static Future<int?> currentBuild() async =>
+      int.tryParse((await PackageInfo.fromPlatform()).buildNumber);
+
   /// 새 버전이 있으면 정보를, 없으면 null. 네트워크 실패도 null.
   Future<UpdateInfo?> check({bool force = false}) async {
     if (!_supported) return null;
     if (_askedThisSession && !force) return null;
 
     try {
-      final response = await _client
-          .get(Uri.parse('$_manifestUrl?t=${DateTime.now().millisecondsSinceEpoch}'))
-          .timeout(const Duration(seconds: 8));
-      if (response.statusCode != 200) return null;
-
-      final info = UpdateInfo.fromJson(
-        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
-      );
-      if (info == null) return null;
-
-      final current = int.tryParse((await PackageInfo.fromPlatform()).buildNumber);
+      final info = await fetchLatest();
+      final current = await currentBuild();
       if (current == null || info.buildNumber <= current) return null;
 
       _askedThisSession = true;
@@ -80,13 +91,17 @@ class UpdateService {
   }
 
   /// APK를 내려받는다. [onProgress]는 0.0~1.0 (길이를 모르면 호출되지 않음).
+  ///
+  /// 받는 중에는 `.part` 파일에 쓰고 다 받은 뒤에 이름을 바꾼다. 그래서 완성된
+  /// 파일이 있으면 다시 받지 않는다 — 받는 도중 앱을 닫아 끊기면 처음부터 다시.
   Future<File> download(
     UpdateInfo info, {
     void Function(double)? onProgress,
   }) async {
     final dir = await getApplicationSupportDirectory();
     final file = File('${dir.path}/coyhouse-${info.buildNumber}.apk');
-    if (await file.exists()) await file.delete();
+    if (await file.exists()) return file;
+    final part = File('${file.path}.part');
 
     final response = await _client.send(
       http.Request('GET', Uri.parse(info.apkUrl)),
@@ -97,7 +112,7 @@ class UpdateService {
 
     final total = response.contentLength ?? 0;
     var received = 0;
-    final sink = file.openWrite();
+    final sink = part.openWrite();
     try {
       await for (final chunk in response.stream) {
         sink.add(chunk);
@@ -107,7 +122,10 @@ class UpdateService {
     } finally {
       await sink.close();
     }
-    return file;
+    if (total > 0 && received != total) {
+      throw HttpException('다운로드가 중간에 끊겼어요 ($received/$total)');
+    }
+    return part.rename(file.path);
   }
 
   /// 확인 창 없이 설치할 수 있는 상태인지 (안드로이드 12+ 이고 설치자가 이 앱).

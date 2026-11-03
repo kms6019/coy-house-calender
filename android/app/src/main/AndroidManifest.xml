@@ -10,6 +10,9 @@
     <!-- 앱 내 업데이트: APK 내려받기 + 설치 화면 띄우기 -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- 안드로이드 12+ 확인 창 없는 자기 업데이트(USER_ACTION_NOT_REQUIRED)의 필수 조건.
+         없으면 시스템이 항상 확인을 요구하고, 앱을 닫은 뒤라 확인 창도 못 띄운다. -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION"/>
 
     <application
         android:label="CoyHouse Calendar"

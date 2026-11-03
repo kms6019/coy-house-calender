@@ -15,6 +15,40 @@ Future<void> maybePromptUpdate(BuildContext context) async {
   }
   if (!context.mounted) return;
 
+  if (await _confirmUpdate(context, info) && context.mounted) {
+    await _downloadAndInstall(context, service, info);
+  }
+}
+
+/// 설정의 "업데이트 확인" 버튼. 결과를 항상 알려 주고, 새 버전이면 화면을 띄운 채
+/// 받아서 설치한다 — 앱이 화면에 있을 때 설치해야 확인 창이 막히지 않는다.
+Future<void> checkForUpdateManually(BuildContext context) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final service = UpdateService();
+  final UpdateInfo latest;
+  final int? current;
+  try {
+    latest = await service.fetchLatest();
+    current = await UpdateService.currentBuild();
+  } catch (_) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('업데이트를 확인하지 못했어요. 인터넷 연결을 확인해 주세요.')),
+    );
+    return;
+  }
+  if (current != null && latest.buildNumber <= current) {
+    messenger.showSnackBar(
+      SnackBar(content: Text('최신 버전이에요 (${latest.versionName})')),
+    );
+    return;
+  }
+  if (!context.mounted) return;
+  if (await _confirmUpdate(context, latest) && context.mounted) {
+    await _downloadAndInstall(context, service, latest);
+  }
+}
+
+Future<bool> _confirmUpdate(BuildContext context, UpdateInfo info) async {
   final accepted = await showDialog<bool>(
     context: context,
     barrierDismissible: false,
@@ -46,9 +80,7 @@ Future<void> maybePromptUpdate(BuildContext context) async {
       ],
     ),
   );
-
-  if (accepted != true || !context.mounted) return;
-  await _downloadAndInstall(context, service, info);
+  return accepted == true;
 }
 
 Future<void> _downloadAndInstall(

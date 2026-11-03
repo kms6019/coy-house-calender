@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:coy_house_calender/services/update_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 void main() {
   group('UpdateInfo.fromJson', () {
@@ -39,6 +44,42 @@ void main() {
       expect(info, isNotNull);
       expect(info!.notes, '');
       expect(info.versionName, '');
+    });
+  });
+
+  group('fetchLatest', () {
+    UpdateService serviceReturning(int status, Object body) => UpdateService(
+      client: MockClient(
+        (_) async => http.Response.bytes(
+          utf8.encode(body is String ? body : jsonEncode(body)),
+          status,
+        ),
+      ),
+    );
+
+    test('배포된 버전 정보를 돌려준다', () async {
+      final info = await serviceReturning(200, {
+        'buildNumber': 21,
+        'versionName': '1.1.11',
+        'apkUrl': 'https://example.com/app.apk',
+        'notes': '업데이트 확인 버튼',
+      }).fetchLatest();
+      expect(info.buildNumber, 21);
+      expect(info.notes, '업데이트 확인 버튼');
+    });
+
+    test('응답 실패는 null 이 아니라 예외 — "최신 버전"과 구분', () async {
+      expect(
+        serviceReturning(404, 'not found').fetchLatest(),
+        throwsA(isA<HttpException>()),
+      );
+    });
+
+    test('형식이 맞지 않으면 예외', () async {
+      expect(
+        serviceReturning(200, {'buildNumber': '21'}).fetchLatest(),
+        throwsA(isA<FormatException>()),
+      );
     });
   });
 }

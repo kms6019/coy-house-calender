@@ -29,17 +29,32 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   /// true: 칸마다 일정 제목이 들어간 월 보기. false: 점 + 아래 선택일 일정.
   bool _expanded = false;
 
+  /// 홈 버튼으로 나갔다 돌아오면 앱이 다시 시작되지 않아 initState 확인이
+  /// 안 돈다 — 돌아올 때마다 다시 확인한다 (찾은 뒤엔 그 실행에서 다시 안 물음).
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
-    // 앱 실행 후 첫 캘린더 진입에서 한 번만 새 버전을 확인한다.
+    // 앱 실행 후 첫 캘린더 진입에서 새 버전을 확인한다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) maybePromptUpdate(context);
     });
+    _lifecycle = AppLifecycleListener(
+      onResume: () {
+        if (mounted) maybePromptUpdate(context);
+      },
+    );
     SharedPreferences.getInstance().then((prefs) {
       final saved = prefs.getBool(_expandedKey) ?? false;
       if (mounted && saved != _expanded) setState(() => _expanded = saved);
     });
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
   }
 
   void _setExpanded(bool value) {
