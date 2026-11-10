@@ -99,6 +99,13 @@ class UpdateService {
     );
   }
 
+  /// APK 다운로드 요청. 압축 없이 받는다 — 서버가 gzip 으로 주면 dart:io 가
+  /// 알아서 풀면서도 Content-Length 는 압축된 크기(절반 남짓)를 그대로 알려 줘서
+  /// 진행률이 200% 를 넘고 아래 길이 검사에 걸린다.
+  static http.Request apkRequest(UpdateInfo info) =>
+      http.Request('GET', apkDownloadUri(info))
+        ..headers['Accept-Encoding'] = 'identity';
+
   /// APK를 내려받는다. [onProgress]는 0.0~1.0 (길이를 모르면 호출되지 않음).
   ///
   /// 받는 중에는 `.part` 파일에 쓰고 다 받은 뒤에 이름을 바꾼다. 완성된 파일은
@@ -115,9 +122,7 @@ class UpdateService {
     }
     final part = File('${file.path}.part');
 
-    final response = await _client.send(
-      http.Request('GET', apkDownloadUri(info)),
-    );
+    final response = await _client.send(apkRequest(info));
     if (response.statusCode != 200) {
       throw HttpException('다운로드 실패 (${response.statusCode})');
     }

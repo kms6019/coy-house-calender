@@ -102,5 +102,13 @@ void main() {
       );
       expect(uri.queryParameters, {'v': '23', 'x': '1'});
     });
+
+    test('APK 는 압축 없이 요청한다 (진행률·길이 검사가 실제 크기 기준이 되게)', () {
+      final request = UpdateService.apkRequest(
+        infoWith('https://example.com/app.apk'),
+      );
+      expect(request.url.toString(), 'https://example.com/app.apk?v=23');
+      expect(request.headers['Accept-Encoding'], 'identity');
+    });
   });
 }
