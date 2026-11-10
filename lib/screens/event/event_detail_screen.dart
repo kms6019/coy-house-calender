@@ -1,17 +1,14 @@
 import 'dart:io';
 
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/event_model.dart';
-import '../../models/event_place.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../services/notification_service.dart';
@@ -20,6 +17,7 @@ import '../../theme/design_tokens.dart';
 import 'event_form_screen.dart' show EventOccurrenceEditArgs;
 import '../../utils/event_utils.dart';
 import '../../widgets/app_surface.dart';
+import '../../widgets/place_map.dart';
 
 class EventDetailArgs {
   final EventModel event; // occurrence 복사본 (표시용)
@@ -98,8 +96,12 @@ class EventDetailScreen extends ConsumerWidget {
                   label: const Text('지도'),
                 ),
               ),
-            if (event.place?.hasLocation ?? false)
-              _PlaceMap(place: event.place!),
+            if (event.place != null)
+              Padding(
+                // 라벨 칸(56)만큼 들여서 장소 이름과 줄을 맞춘다
+                padding: const EdgeInsets.only(left: 56, bottom: 14),
+                child: PlaceMap(place: event.place!),
+              ),
             if (event.description != null && event.description!.isNotEmpty)
               _InfoRow(label: '메모', value: event.description!),
             Container(height: 1, color: DesignTokens.of(context).hairline),
@@ -624,44 +626,6 @@ class _DetailHeader extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// 장소 행 아래 작은 지도 그림. 누르면 구글 지도로 연다.
-///
-/// 라이트 모드(움직이지 않는 지도)라 목록 스크롤을 방해하지 않는다.
-/// Maps SDK for Android 를 쓰므로 안드로이드에서만 그린다.
-class _PlaceMap extends StatelessWidget {
-  final EventPlace place;
-  const _PlaceMap({required this.place});
-
-  @override
-  Widget build(BuildContext context) {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-      return const SizedBox.shrink();
-    }
-    final target = LatLng(place.lat!, place.lng!);
-    return Padding(
-      padding: const EdgeInsets.only(left: 56, bottom: 14),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          height: 160,
-          child: GoogleMap(
-            liteModeEnabled: true,
-            initialCameraPosition: CameraPosition(target: target, zoom: 16),
-            markers: {
-              Marker(markerId: const MarkerId('place'), position: target),
-            },
-            mapToolbarEnabled: false,
-            onTap: (_) => launchUrl(
-              place.mapsUri,
-              mode: LaunchMode.externalApplication,
-            ),
-          ),
-        ),
       ),
     );
   }

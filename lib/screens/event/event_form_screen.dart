@@ -12,6 +12,7 @@ import '../../theme/couple_palette.dart';
 import '../../theme/event_icons.dart';
 import '../../utils/conflict_utils.dart';
 import '../../widgets/app_surface.dart';
+import '../../widgets/place_map.dart';
 import 'place_search_sheet.dart';
 
 /// 반복 일정의 한 회차만 고칠 때 넘기는 값.
@@ -850,25 +851,34 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
                 title: '장소',
                 subtitle: '구글 지도에서 찾거나 직접 적어요.',
                 icon: Icons.place_outlined,
-                child: ListTile(
-                  leading: const Icon(Icons.place_outlined),
-                  title: Text(
-                    _place?.name ?? '장소 추가',
-                    style: _place == null
-                        ? TextStyle(color: colors.onSurfaceVariant)
-                        : null,
-                  ),
-                  subtitle: _place?.address != null
-                      ? Text(_place!.address!)
-                      : null,
-                  trailing: _place == null
-                      ? const Icon(Icons.chevron_right)
-                      : IconButton(
-                          tooltip: '장소 지우기',
-                          icon: const Icon(Icons.close),
-                          onPressed: () => setState(() => _place = null),
-                        ),
-                  onTap: _pickPlace,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.place_outlined),
+                      title: Text(
+                        _place?.name ?? '장소 추가',
+                        style: _place == null
+                            ? TextStyle(color: colors.onSurfaceVariant)
+                            : null,
+                      ),
+                      subtitle: _place?.address != null
+                          ? Text(_place!.address!)
+                          : null,
+                      trailing: _place == null
+                          ? const Icon(Icons.chevron_right)
+                          : IconButton(
+                              tooltip: '장소 지우기',
+                              icon: const Icon(Icons.close),
+                              onPressed: () => setState(() => _place = null),
+                            ),
+                      onTap: _pickPlace,
+                    ),
+                    if (_place != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: PlaceMap(place: _place!),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 18),

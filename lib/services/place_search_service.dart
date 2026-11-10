@@ -23,17 +23,17 @@ class PlaceSearchService {
     return suggestions.map(EventPlace.fromMap).whereType<EventPlace>().toList();
   }
 
-  /// 고른 장소에 좌표를 붙여 돌려준다. 검색과 같은 [sessionToken] 을 넘겨
+  /// 장소에 좌표를 붙여 돌려준다. 검색 중이면 같은 [sessionToken] 을 넘겨
   /// 세션을 마무리한다 — 그래야 그 세션의 자동완성 요금이 붙지 않는다.
   Future<EventPlace> withLocation(
     EventPlace place, {
-    required String sessionToken,
+    String? sessionToken,
   }) async {
     final placeId = place.placeId;
     if (placeId == null) return place;
     final result = await _locationCallable.call<Map<Object?, Object?>>({
       'placeId': placeId,
-      'sessionToken': sessionToken,
+      'sessionToken': ?sessionToken,
     });
     final lat = result.data['lat'], lng = result.data['lng'];
     if (lat is! num || lng is! num) return place;
