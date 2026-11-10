@@ -5,7 +5,14 @@ import '../../utils/dday_utils.dart';
 class AnniversaryChips extends StatelessWidget {
   final List<AnniversaryModel> anniversaries;
 
-  const AnniversaryChips({super.key, required this.anniversaries});
+  /// 한 사람의 기념일은 그 사람 색으로 (uid → 색)
+  final Map<String, int> ownerColors;
+
+  const AnniversaryChips({
+    super.key,
+    required this.anniversaries,
+    this.ownerColors = const {},
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +44,9 @@ class AnniversaryChips extends StatelessWidget {
                       ? Icons.favorite
                       : Icons.cake,
                   size: 13,
-                  color: colors.primary,
+                  color: ownerColors[a.ownerUid] != null
+                      ? Color(ownerColors[a.ownerUid]!)
+                      : colors.primary,
                 ),
                 const SizedBox(width: 4),
                 Text(

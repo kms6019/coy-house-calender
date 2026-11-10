@@ -57,8 +57,10 @@ List<AnniversaryModel> sortedForDisplay(List<AnniversaryModel> list, DateTime no
 
 /// 기념일을 해당 월 캘린더 셀에 표시할 가상 이벤트로 변환.
 /// annual은 매년 해당 월/일(말일 초과 시 말일), countUp은 원 날짜가 속한 달에만.
+/// 한 사람의 기념일은 [ownerColors] 의 그 사람 색, 둘의 기념일은 분홍.
 List<EventModel> anniversaryEventsForMonth(
-    List<AnniversaryModel> anniversaries, DateTime month) {
+    List<AnniversaryModel> anniversaries, DateTime month,
+    {Map<String, int> ownerColors = const {}}) {
   final result = <EventModel>[];
   for (final a in anniversaries) {
     DateTime? day;
@@ -84,7 +86,7 @@ List<EventModel> anniversaryEventsForMonth(
       title: a.title,
       startDateTime: day,
       isAllDay: true,
-      color: 0xFFE91E63,
+      color: ownerColors[a.ownerUid] ?? 0xFFE91E63,
       hasAlarm: false,
       alarmMinutesBefore: 0,
       createdAt: day,
@@ -97,8 +99,9 @@ List<EventModel> anniversaryEventsForMonth(
 
 /// 그날 하루에 해당하는 기념일 가상 이벤트 (선택일 일정 목록용).
 List<EventModel> anniversaryEventsForDay(
-    List<AnniversaryModel> anniversaries, DateTime day) {
-  return anniversaryEventsForMonth(anniversaries, day)
+    List<AnniversaryModel> anniversaries, DateTime day,
+    {Map<String, int> ownerColors = const {}}) {
+  return anniversaryEventsForMonth(anniversaries, day, ownerColors: ownerColors)
       .where((e) => DateUtils.isSameDay(e.startDateTime, day))
       .toList();
 }

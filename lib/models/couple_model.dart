@@ -28,6 +28,12 @@ class CoupleModel {
   Color get ownerColorValue => Color(ownerColor);
   Color get partnerColorValue => Color(partnerColor);
 
+  /// uid → 그 사람 색 (기념일 주인 색 표시용)
+  Map<String, int> get memberColors => {
+    ownerUid: ownerColor,
+    if (partnerUid.isNotEmpty) partnerUid: partnerColor,
+  };
+
   factory CoupleModel.fromMap(Map<String, dynamic> map) {
     return CoupleModel(
       coupleId: map['coupleId'] as String,

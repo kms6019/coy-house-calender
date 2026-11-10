@@ -14,6 +14,9 @@ class AnniversaryModel {
   final int? lunarMonth;
   final int? lunarDay;
 
+  /// 누구의 기념일인지 (생일 등). null 이면 둘의 기념일.
+  final String? ownerUid;
+
   const AnniversaryModel({
     required this.id,
     required this.title,
@@ -22,6 +25,7 @@ class AnniversaryModel {
     this.isLunar = false,
     this.lunarMonth,
     this.lunarDay,
+    this.ownerUid,
   });
 
   factory AnniversaryModel.fromMap(Map<String, dynamic> map) {
@@ -33,6 +37,7 @@ class AnniversaryModel {
       isLunar: map['isLunar'] as bool? ?? false,
       lunarMonth: (map['lunarMonth'] as num?)?.toInt(),
       lunarDay: (map['lunarDay'] as num?)?.toInt(),
+      ownerUid: map['ownerUid'] as String?,
     );
   }
 
@@ -47,6 +52,7 @@ class AnniversaryModel {
         'lunarMonth': lunarMonth,
         'lunarDay': lunarDay,
       },
+      if (ownerUid != null) 'ownerUid': ownerUid,
     };
   }
 }

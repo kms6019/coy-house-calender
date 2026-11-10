@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/anniversary_model.dart';
+import '../../models/couple_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../utils/dday_utils.dart';
 import '../../utils/lunar_utils.dart';
@@ -14,6 +16,7 @@ class AnniversaryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final coupleAsync = ref.watch(coupleStreamProvider);
+    final myUid = ref.watch(authStateProvider).valueOrNull?.uid;
 
     return Scaffold(
       appBar: AppBar(title: const Text('기념일 관리')),
@@ -33,12 +36,7 @@ class AnniversaryScreen extends ConsumerWidget {
               title: '첫 기념일을 추가해 보세요',
               message: '함께한 날은 D+로, 매년 돌아오는 날은 기념일로 표시해요.',
               action: FilledButton.tonalIcon(
-                onPressed: () => _showForm(
-                  context,
-                  ref,
-                  couple.coupleId,
-                  couple.anniversaries,
-                ),
+                onPressed: () => _showForm(context, ref, couple, myUid),
                 icon: const Icon(Icons.add),
                 label: const Text('기념일 추가'),
               ),
@@ -51,6 +49,12 @@ class AnniversaryScreen extends ConsumerWidget {
               itemBuilder: (context, i) {
                 final a = list[i];
                 final colors = Theme.of(context).colorScheme;
+                final owner = _ownerLabel(a, myUid);
+                // 음력은 이번에 돌아오는 양력 날짜를 같이 보여 준다
+                final when = a.isLunar
+                    ? '음력 ${a.lunarMonth}월 ${a.lunarDay}일 '
+                          '(양력 ${DateFormat('M월 d일').format(nextAnnualOccurrence(a, DateUtils.dateOnly(DateTime.now())))})'
+                    : DateFormat('yyyy.MM.dd').format(a.date);
                 return Card(
                   child: ListTile(
                     leading: AppIconBadge(
@@ -64,9 +68,11 @@ class AnniversaryScreen extends ConsumerWidget {
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     subtitle: Text(
-                      a.isLunar
-                          ? '음력 ${a.lunarMonth}월 ${a.lunarDay}일 · 매년 반복'
-                          : '${DateFormat('yyyy.MM.dd').format(a.date)} · ${a.type == AnniversaryType.countUp ? '카운트업' : '매년 반복'}',
+                      [
+                        ?owner,
+                        when,
+                        a.type == AnniversaryType.countUp ? '카운트업' : '매년 반복',
+                      ].join(' · '),
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -104,13 +110,8 @@ class AnniversaryScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    onTap: () => _showForm(
-                      context,
-                      ref,
-                      couple.coupleId,
-                      couple.anniversaries,
-                      existing: a,
-                    ),
+                    onTap: () =>
+                        _showForm(context, ref, couple, myUid, existing: a),
                   ),
                 );
               },
@@ -123,12 +124,8 @@ class AnniversaryScreen extends ConsumerWidget {
       floatingActionButton: coupleAsync.valueOrNull == null
           ? null
           : FloatingActionButton.extended(
-              onPressed: () => _showForm(
-                context,
-                ref,
-                coupleAsync.value!.coupleId,
-                coupleAsync.value!.anniversaries,
-              ),
+              onPressed: () =>
+                  _showForm(context, ref, coupleAsync.value!, myUid),
               icon: const Icon(Icons.add),
               label: const Text('기념일 추가'),
             ),
@@ -169,25 +166,48 @@ class AnniversaryScreen extends ConsumerWidget {
   Future<void> _showForm(
     BuildContext context,
     WidgetRef ref,
-    String coupleId,
-    List<AnniversaryModel> current, {
+    CoupleModel couple,
+    String? myUid, {
     AnniversaryModel? existing,
   }) async {
+    final partnerUid = couple.ownerUid == myUid
+        ? couple.partnerUid
+        : couple.ownerUid;
     final result = await showDialog<AnniversaryModel>(
       context: context,
-      builder: (ctx) => _AnniversaryFormDialog(existing: existing),
+      builder: (ctx) => _AnniversaryFormDialog(
+        existing: existing,
+        myUid: myUid,
+        partnerUid: partnerUid,
+      ),
     );
     if (result == null) return;
-    final updated = [...current.where((a) => a.id != result.id), result];
+    final updated = [
+      ...couple.anniversaries.where((a) => a.id != result.id),
+      result,
+    ];
     await ref
         .read(firestoreServiceProvider)
-        .updateAnniversaries(coupleId, updated);
+        .updateAnniversaries(couple.coupleId, updated);
   }
+}
+
+/// 기념일 주인을 보는 사람 기준으로 — 둘의 기념일이면 null.
+String? _ownerLabel(AnniversaryModel a, String? myUid) {
+  final owner = a.ownerUid;
+  if (owner == null) return null;
+  return owner == myUid ? '나' : '파트너';
 }
 
 class _AnniversaryFormDialog extends StatefulWidget {
   final AnniversaryModel? existing;
-  const _AnniversaryFormDialog({this.existing});
+  final String? myUid;
+  final String partnerUid;
+  const _AnniversaryFormDialog({
+    this.existing,
+    required this.myUid,
+    required this.partnerUid,
+  });
 
   @override
   State<_AnniversaryFormDialog> createState() => _AnniversaryFormDialogState();
@@ -201,6 +221,9 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
   late int _lunarMonth;
   late int _lunarDay;
 
+  /// 누구의 기념일인지. '' 이면 둘의 기념일 (SegmentedButton 값이라 null 대신)
+  late String _owner;
+
   @override
   void initState() {
     super.initState();
@@ -212,6 +235,7 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
     _isLunar = widget.existing?.isLunar ?? false;
     _lunarMonth = widget.existing?.lunarMonth ?? 1;
     _lunarDay = widget.existing?.lunarDay ?? 1;
+    _owner = widget.existing?.ownerUid ?? '';
   }
 
   /// 음력 월·일 고르기. 연도는 매년 반복이라 필요 없다.
@@ -266,6 +290,17 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
     }
   }
 
+  /// 고른 음력 날짜가 이번에 떨어지는 양력 날짜
+  Widget? _lunarSolarText() {
+    final solar = nextLunarOccurrence(
+      _lunarMonth,
+      _lunarDay,
+      DateUtils.dateOnly(DateTime.now()),
+    );
+    if (solar == null) return null;
+    return Text('양력 ${DateFormat('yyyy.M.d').format(solar)}');
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -285,10 +320,26 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
             autofocus: true,
           ),
           const SizedBox(height: 12),
+          SegmentedButton<String>(
+            segments: [
+              const ButtonSegment(value: '', label: Text('우리')),
+              if (widget.myUid != null)
+                ButtonSegment(value: widget.myUid!, label: const Text('나')),
+              if (widget.partnerUid.isNotEmpty)
+                ButtonSegment(
+                  value: widget.partnerUid,
+                  label: const Text('파트너'),
+                ),
+            ],
+            selected: {_owner},
+            onSelectionChanged: (s) => setState(() => _owner = s.first),
+          ),
+          const SizedBox(height: 4),
           if (_type == AnniversaryType.annual && _isLunar)
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('날짜'),
+              subtitle: _lunarSolarText(),
               trailing: Text('음력 $_lunarMonth월 $_lunarDay일'),
               onTap: _pickLunar,
             )
@@ -361,6 +412,7 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
                 isLunar: lunar,
                 lunarMonth: lunar ? _lunarMonth : null,
                 lunarDay: lunar ? _lunarDay : null,
+                ownerUid: _owner.isEmpty ? null : _owner,
               ),
             );
           },

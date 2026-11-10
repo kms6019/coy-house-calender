@@ -129,6 +129,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       padding: const EdgeInsets.only(top: 4, bottom: 2),
                       child: AnniversaryChips(
                         anniversaries: couple.anniversaries,
+                        ownerColors: couple.memberColors,
                       ),
                     ),
               orElse: () => const SizedBox.shrink(),
@@ -194,6 +195,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   coupleAsync.valueOrNull?.anniversaries ??
                                       const [],
                                   selectedDay,
+                                  ownerColors:
+                                      coupleAsync.valueOrNull?.memberColors ??
+                                      const {},
                                 ),
                                 ...eventsForDay(allEvents, selectedDay),
                               ],
@@ -646,8 +650,9 @@ class _MonthPagerState extends ConsumerState<_MonthPager> {
 
     final selectedDay = ref.watch(selectedDateProvider);
     final events = ref.watch(eventsStreamProvider).valueOrNull ?? [];
-    final anniversaries =
-        ref.watch(coupleStreamProvider).valueOrNull?.anniversaries ?? const [];
+    final couple = ref.watch(coupleStreamProvider).valueOrNull;
+    final anniversaries = couple?.anniversaries ?? const [];
+    final ownerColors = couple?.memberColors ?? const <String, int>{};
 
     return PageView.builder(
       controller: _controller,
@@ -668,7 +673,11 @@ class _MonthPagerState extends ConsumerState<_MonthPager> {
             month: month,
             events: [
               ...expanded,
-              ...anniversaryEventsForMonth(anniversaries, month),
+              ...anniversaryEventsForMonth(
+                anniversaries,
+                month,
+                ownerColors: ownerColors,
+              ),
             ],
             holidays:
                 ref.watch(koreanHolidaysProvider(month.year)).valueOrNull ??
@@ -682,4 +691,3 @@ class _MonthPagerState extends ConsumerState<_MonthPager> {
     );
   }
 }
-

@@ -14,6 +14,15 @@ Map<String, dynamic> _baseCoupleMap() => {
     };
 
 void main() {
+  test('memberColors: 두 사람 uid → 각자 색, 파트너 없으면 한 사람만', () {
+    expect(CoupleModel.fromMap(_baseCoupleMap()).memberColors, {
+      'u1': 0xFF42A5F5,
+      'u2': 0xFFF48FB1,
+    });
+    final solo = CoupleModel.fromMap(_baseCoupleMap()..remove('partnerUid'));
+    expect(solo.memberColors, {'u1': 0xFF42A5F5});
+  });
+
   test('anniversaries 필드 없으면 빈 리스트', () {
     final c = CoupleModel.fromMap(_baseCoupleMap());
     expect(c.anniversaries, isEmpty);

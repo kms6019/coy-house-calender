@@ -76,6 +76,19 @@ void main() {
       expect(b.date, DateTime(2024, 3, 1));
       expect(b.type, AnniversaryType.countUp);
     });
+    test('기념일 주인(ownerUid) 왕복, 둘의 기념일은 저장하지 않음', () {
+      final mine = AnniversaryModel(
+        id: 'b1',
+        title: '생일',
+        date: DateTime(2026, 4, 22),
+        type: AnniversaryType.annual,
+        ownerUid: 'u1',
+      );
+      expect(AnniversaryModel.fromMap(mine.toMap()).ownerUid, 'u1');
+      final ours = _ann('annual', DateTime(2024, 3, 1));
+      expect(ours.toMap().containsKey('ownerUid'), isFalse);
+      expect(AnniversaryModel.fromMap(ours.toMap()).ownerUid, isNull);
+    });
     test('toMap의 date는 Timestamp', () {
       final m = _ann('annual', DateTime(2024, 3, 1)).toMap();
       expect(m['date'], isA<Timestamp>());
@@ -102,6 +115,42 @@ void main() {
       final list = anniversaryEventsForMonth(
           [_ann('annual', DateTime(2024, 2, 29))], DateTime(2026, 2));
       expect(list.first.startDateTime, DateTime(2026, 2, 28));
+    });
+
+    test('한 사람의 기념일은 그 사람 색, 둘의 기념일·모르는 사람은 분홍', () {
+      AnniversaryModel owned(String? uid) => AnniversaryModel(
+            id: 'o-$uid',
+            title: '생일',
+            date: DateTime(1990, 7, 15),
+            type: AnniversaryType.annual,
+            ownerUid: uid,
+          );
+      final list = anniversaryEventsForMonth(
+        [owned('u1'), owned(null), owned('stranger')],
+        DateTime(2026, 7),
+        ownerColors: {'u1': 0xFF42A5F5},
+      );
+      expect(list.map((e) => e.color), [0xFF42A5F5, 0xFFE91E63, 0xFFE91E63]);
+    });
+
+    test('음력 생일은 그해 양력 날짜에 그 사람 색으로', () {
+      final a = AnniversaryModel(
+        id: 'l1',
+        title: '음력 생일',
+        date: DateTime(2026, 2, 17),
+        type: AnniversaryType.annual,
+        isLunar: true,
+        lunarMonth: 1,
+        lunarDay: 1,
+        ownerUid: 'u2',
+      );
+      // 2026년 음력 1월 1일(설날) = 양력 2월 17일
+      final e = anniversaryEventsForDay(
+        [a],
+        DateTime(2026, 2, 17),
+        ownerColors: {'u2': 0xFFF48FB1},
+      ).single;
+      expect(e.color, 0xFFF48FB1);
     });
 
     test('countUp은 원 날짜의 달에만 표시', () {
