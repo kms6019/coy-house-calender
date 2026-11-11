@@ -14,6 +14,10 @@ class AnniversaryModel {
   final int? lunarMonth;
   final int? lunarDay;
 
+  /// 음력 날짜의 원래 해 (태어난 해 등). 표시용 — 매년 도래일은 월·일로만 센다.
+  /// 이 필드가 생기기 전에 저장한 음력 기념일은 null.
+  final int? lunarYear;
+
   /// 누구의 기념일인지 (생일 등). null 이면 둘의 기념일.
   final String? ownerUid;
 
@@ -25,6 +29,7 @@ class AnniversaryModel {
     this.isLunar = false,
     this.lunarMonth,
     this.lunarDay,
+    this.lunarYear,
     this.ownerUid,
   });
 
@@ -37,6 +42,7 @@ class AnniversaryModel {
       isLunar: map['isLunar'] as bool? ?? false,
       lunarMonth: (map['lunarMonth'] as num?)?.toInt(),
       lunarDay: (map['lunarDay'] as num?)?.toInt(),
+      lunarYear: (map['lunarYear'] as num?)?.toInt(),
       ownerUid: map['ownerUid'] as String?,
     );
   }
@@ -51,6 +57,7 @@ class AnniversaryModel {
         'isLunar': true,
         'lunarMonth': lunarMonth,
         'lunarDay': lunarDay,
+        if (lunarYear != null) 'lunarYear': lunarYear,
       },
       if (ownerUid != null) 'ownerUid': ownerUid,
     };

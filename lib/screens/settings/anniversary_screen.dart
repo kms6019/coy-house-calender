@@ -52,7 +52,7 @@ class AnniversaryScreen extends ConsumerWidget {
                 final owner = _ownerLabel(a, myUid);
                 // 음력은 이번에 돌아오는 양력 날짜를 같이 보여 준다
                 final when = a.isLunar
-                    ? '음력 ${a.lunarMonth}월 ${a.lunarDay}일 '
+                    ? '${_lunarLabel(a.lunarYear, a.lunarMonth, a.lunarDay)} '
                           '(양력 ${DateFormat('M월 d일').format(nextAnnualOccurrence(a, DateUtils.dateOnly(DateTime.now())))})'
                     : DateFormat('yyyy.MM.dd').format(a.date);
                 return Card(
@@ -199,6 +199,10 @@ String? _ownerLabel(AnniversaryModel a, String? myUid) {
   return owner == myUid ? '나' : '파트너';
 }
 
+/// "음력 1990년 3월 5일" — 해가 없는 옛 기념일은 월·일만.
+String _lunarLabel(int? year, int? month, int? day) =>
+    '음력 ${year == null ? '' : '$year년 '}$month월 $day일';
+
 class _AnniversaryFormDialog extends StatefulWidget {
   final AnniversaryModel? existing;
   final String? myUid;
@@ -220,6 +224,7 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
   late bool _isLunar;
   late int _lunarMonth;
   late int _lunarDay;
+  late int _lunarYear;
 
   /// 누구의 기념일인지. '' 이면 둘의 기념일 (SegmentedButton 값이라 null 대신)
   late String _owner;
@@ -235,11 +240,15 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
     _isLunar = widget.existing?.isLunar ?? false;
     _lunarMonth = widget.existing?.lunarMonth ?? 1;
     _lunarDay = widget.existing?.lunarDay ?? 1;
+    _lunarYear = widget.existing?.lunarYear ?? DateTime.now().year;
     _owner = widget.existing?.ownerUid ?? '';
   }
 
-  /// 음력 월·일 고르기. 연도는 매년 반복이라 필요 없다.
+  /// 음력 연·월·일 고르기. 해는 태어난 해처럼 원래 날짜를 남기는 용도이고,
+  /// 매년 도래일은 월·일로만 센다.
   Future<void> _pickLunar() async {
+    final lastYear = DateTime.now().year;
+    var year = _lunarYear.clamp(1900, lastYear);
     var month = _lunarMonth;
     var day = _lunarDay;
     final ok = await showDialog<bool>(
@@ -251,6 +260,15 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               DropdownButton<int>(
+                value: year,
+                items: [
+                  for (var y = 1900; y <= lastYear; y++)
+                    DropdownMenuItem(value: y, child: Text('$y년')),
+                ],
+                onChanged: (v) => setLocal(() => year = v ?? year),
+              ),
+              const SizedBox(width: 12),
+              DropdownButton<int>(
                 value: month,
                 items: [
                   for (var m = 1; m <= 12; m++)
@@ -258,7 +276,7 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
                 ],
                 onChanged: (v) => setLocal(() => month = v ?? month),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               DropdownButton<int>(
                 value: day,
                 items: [
@@ -284,6 +302,7 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
     );
     if (ok == true) {
       setState(() {
+        _lunarYear = year;
         _lunarMonth = month;
         _lunarDay = day;
       });
@@ -342,7 +361,7 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
               contentPadding: EdgeInsets.zero,
               title: const Text('날짜'),
               subtitle: _lunarSolarText(),
-              trailing: Text('음력 $_lunarMonth월 $_lunarDay일'),
+              trailing: Text(_lunarLabel(_lunarYear, _lunarMonth, _lunarDay)),
               onTap: _pickLunar,
             )
           else
@@ -354,7 +373,7 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
                 final picked = await showDatePicker(
                   context: context,
                   initialDate: _date,
-                  firstDate: DateTime(1990),
+                  firstDate: DateTime(1900),
                   lastDate: DateTime(2100),
                 );
                 if (picked != null) setState(() => _date = picked);
@@ -414,6 +433,7 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
                 isLunar: lunar,
                 lunarMonth: lunar ? _lunarMonth : null,
                 lunarDay: lunar ? _lunarDay : null,
+                lunarYear: lunar ? _lunarYear : null,
                 ownerUid: _owner.isEmpty ? null : _owner,
               ),
             );

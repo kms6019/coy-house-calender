@@ -89,6 +89,22 @@ void main() {
       expect(ours.toMap().containsKey('ownerUid'), isFalse);
       expect(AnniversaryModel.fromMap(ours.toMap()).ownerUid, isNull);
     });
+    test('음력 해(lunarYear) 왕복, 해 없는 옛 음력 기념일은 null', () {
+      final birthday = AnniversaryModel(
+        id: 'l1',
+        title: '음력 생일',
+        date: DateTime(2027, 4, 1),
+        type: AnniversaryType.annual,
+        isLunar: true,
+        lunarYear: 1990,
+        lunarMonth: 3,
+        lunarDay: 5,
+      );
+      expect(AnniversaryModel.fromMap(birthday.toMap()).lunarYear, 1990);
+      final old = birthday.toMap()..remove('lunarYear');
+      expect(AnniversaryModel.fromMap(old).lunarYear, isNull);
+      expect(AnniversaryModel.fromMap(old).lunarMonth, 3);
+    });
     test('toMap의 date는 Timestamp', () {
       final m = _ann('annual', DateTime(2024, 3, 1)).toMap();
       expect(m['date'], isA<Timestamp>());
