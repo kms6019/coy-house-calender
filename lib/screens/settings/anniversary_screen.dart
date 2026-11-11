@@ -310,6 +310,8 @@ class _AnniversaryFormDialogState extends State<_AnniversaryFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      // 키보드가 올라오면 공간이 모자라 음력 스위치가 버튼 밑에 가려졌다 — 스크롤되게
+      scrollable: true,
       title: Text(widget.existing == null ? '기념일 추가' : '기념일 수정'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
